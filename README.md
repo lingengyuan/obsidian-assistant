@@ -1,218 +1,210 @@
-# Obsidian Knowledge Assistant
+# Obsidian Assistant
 
 <div align="center">
 
-![Python](https://img.shields.io/badge/python-3.7+-blue.svg)
+![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)
 
-**智能分析你的 Obsidian 知识库，提供深度洞察和改进建议**
+**只读分析 Obsidian 知识库，输出稳定 JSON 与报告（CLI: `oka`）**
 
-[功能特性](#功能特性) • [快速开始](#快速开始) • [文档](#文档) • [贡献指南](#贡献指南)
+[功能特性](#功能特性) · [快速开始](#快速开始) · [输出与目录契约](#输出与目录契约) · [贡献指南](#贡献指南)
 
 </div>
 
 ---
 
-## 📖 简介
+## 简介
 
-Obsidian Knowledge Assistant 是一个强大的命令行工具，用于分析和优化你的 Obsidian 知识库。它提供全面的统计分析、质量评分、相似度检测等功能，帮助你：
+Obsidian Assistant 是一个以安全只读为默认的命令行工具，专注输出稳定产物与可解释的推荐建议。核心体验是：
 
-- 🔍 发现孤岛笔记和缺失链接
-- 📊 评估笔记质量并获得改进建议
-- 🔗 识别内容相似的笔记
-- 💾 导出数据用于进一步分析
-- 📈 追踪知识库的健康度变化
+- 一条命令：`oka run --vault <path>`
+- 产物稳定：`reports/health.json`, `reports/action-items.json`, `reports/run-summary.json`, `reports/report.md`
+- 推荐系统仅生成 action-items（不写入 vault）
+- `oka doctor` 检查路径、锁文件、编码与换行符
 
-## ✨ 功能特性
+## 功能特性
 
 ### 核心功能
-- **📊 全面统计** - 笔记数量、字数、链接、标签等详细统计
-- **🏝️ 孤岛检测** - 识别没有任何链接的孤立笔记
-- **🔗 连接分析** - 发现知识枢纽和核心概念
-- **🏷️ 标签统计** - 最常用标签和无标签笔记分析
 
-### 高级功能
-- **🎯 质量评分** - 基于字数、链接、标签、新鲜度的四维评分系统
-- **🔍 相似度分析** - TF-IDF + 余弦相似度算法，找出内容相似的笔记
-- **💾 数据导出** - 支持 JSON 和 CSV 格式导出
-- **🗂️ 多 Vault 支持** - 同时分析多个知识库
-- **🔎 强大搜索** - 按关键词、标签、链接数等条件搜索
+- **只读扫描与解析**：递归扫描 Markdown，解析 frontmatter 与内部链接 `[[...]]`
+- **健康指标**：文件数、frontmatter 覆盖、链接统计、断链候选、孤岛笔记
+- **推荐系统**：metadata 建议（keywords/aliases/related）、Related 追加区块（Class A）、相似笔记合并预览（只读）
+- **可解释置信度**：reason 中包含分项得分与 filters
+- **Doctor 检查**：路径/权限、锁文件、UTF-8 BOM/非 UTF-8、LF/CRLF 混用
 
-## 🚀 快速开始
+### 结构化输出（JSON 示例）
 
-### 安装
+`action-items.json`（节选）：
 
-```bash
-# 克隆仓库
-git clone https://github.com/yourusername/obsidian-knowledge-assistant.git
-cd obsidian-knowledge-assistant
-
-# 无需安装依赖（仅使用 Python 标准库）
+```json
+{
+  "version": "1",
+  "vault": "/abs/path",
+  "generated_at": "2026-01-16T14:44:27Z",
+  "profile": "conservative",
+  "items": [
+    {
+      "id": "act_0001",
+      "type": "append_related_links_section",
+      "risk_class": "A",
+      "target_path": "notes/alpha.md",
+      "confidence": 0.51,
+      "reason": {
+        "content_sim": 0.846,
+        "title_sim": 0.0,
+        "link_overlap": 0.0,
+        "filters": ["path_penalty=0.90"],
+        "weights": { "content": 0.6, "title": 0.3, "link": 0.1 },
+        "norm_method": "quantile"
+      },
+      "payload": {
+        "anchor": "oka_related_v1",
+        "markdown_block": "## Related\n<!-- oka_related_v1 -->\n- [[beta]] (0.51)\n"
+      },
+      "dependencies": []
+    }
+  ]
+}
 ```
 
-### 配置
+`run-summary.json`（节选）：
 
-编辑 `config/set_env.sh` 设置你的 vault 路径：
-
-```bash
-export VAULT_PATH="/path/to/your/obsidian/vault"
+```json
+{
+  "version": "1",
+  "run_id": "20260116_144427_c872c4",
+  "timing": { "total_ms": 4, "stages": { "scan_ms": 0, "parse_ms": 1 } },
+  "io": { "scanned_files": 12, "skipped": { "non_md": 0, "too_large": 0, "no_permission": 0 } },
+  "cache": { "present": false, "hit_rate": 0.0, "incremental_updated": 0 },
+  "downgrades": []
+}
 ```
 
-### 运行
+### 设计约束
 
-```bash
-# 加载配置
-source config/set_env.sh
+- 不引入 LLM
+- 不写入 vault（默认只读）
+- 输出 schema 带 `version` 字段
 
-# 生成完整分析报告
-python src/main.py
+## 快速开始
 
-# 查看质量评分
-python src/quality.py score
+### 运行（不安装）
 
-# 查找相似笔记
-python src/similar.py duplicates
+Windows PowerShell：
+
+```powershell
+$env:PYTHONPATH = "$(Get-Location)\src"
+python -m oka run --vault <path-to-vault>
 ```
 
-## 📚 文档
+macOS/Linux：
 
+```bash
+PYTHONPATH=src python -m oka run --vault <path-to-vault>
+```
+
+### 安装（可选）
+
+```bash
+python -m pip install -e .
+oka run --vault <path-to-vault>
+```
+
+### Doctor
+
+```bash
+python -m oka doctor --vault <path-to-vault>
+python -m oka doctor --init-config --vault <path-to-vault>
+```
+
+### JSON 输出
+
+```bash
+python -m oka run --vault <path-to-vault> --json
+```
+
+## 输出与目录契约
+
+```
+reports/
+  health.json
+  action-items.json
+  run-summary.json
+  report.md
+cache/
+  index.sqlite
+locks/
+  write-lease.json
+  offline-lock.json
+```
+
+## 配置
+
+使用 `oka doctor --init-config` 生成 `oka.toml`，规则如下：
+
+- 传入 `--vault` 时写入 vault 根目录
+- 否则写入当前工作目录
+- 若已存在则不会覆盖
+
+示例（节选）：
+
+```toml
+[profile]
+name = "conservative"
+
+[scan]
+max_file_mb = 5
+exclude_dirs = [".obsidian"]
+
+[scoring]
+model = "quantile"
+w_content = 0.6
+w_title = 0.3
+w_link = 0.1
+
+[filters]
+path_penalty = 0.9
+```
+
+## 使用示例
+
+```bash
+python -m oka run --vault <path-to-vault>
+python -m oka run --vault <path-to-vault> --json
+python -m oka doctor --vault <path-to-vault>
+```
+
+## 项目结构
+
+```
+obsidian-assistant/
+├── src/oka/
+│   ├── cli/              # CLI 入口
+│   └── core/             # pipeline/scoring/doctor
+├── tests/
+│   └── fixtures/
+├── docs/
+└── README.md
+```
+
+## 测试
+
+```bash
+pytest -q
+```
+
+## 文档
+
+- [开发基线](docs/development.md)
 - [安装指南](docs/installation.md)
-- [使用教程](docs/usage.md)
-- [功能详解](docs/features.md)
-- [配置说明](docs/configuration.md)
-- [API 文档](docs/api.md)
+- [示例](docs/examples.md)
 
-## 🎯 使用示例
+## 旧版工具（Legacy）
 
-### 生成知识库报告
+项目仍保留旧版脚本入口（`src/main.py`, `src/quality.py`, `src/search.py`, `src/similar.py`），但新功能以 `oka` 为主。
 
-```bash
-python src/main.py
-```
-
-生成包含以下内容的 Markdown 报告：
-- 总体概况统计
-- 连接分析（知识枢纽、核心概念）
-- 孤岛笔记列表
-- 标签使用分析
-- 质量评分报告
-
-### 查找需要改进的笔记
-
-```bash
-# 查看质量最差的笔记
-python src/quality.py worst --limit 10
-
-# 查找可能重复的笔记
-python src/similar.py duplicates --threshold 0.7
-
-# 查找相关但未链接的笔记
-python src/similar.py unlinked
-```
-
-### 搜索笔记
-
-```bash
-# 按关键词搜索
-python src/search.py search "python"
-
-# 按标签搜索
-python src/search.py search --tags "编程,学习"
-
-# 按链接数搜索
-python src/search.py search --min-links 5
-```
-
-## 🎨 输出示例
-
-### 知识库分析报告
-
-```markdown
-# 📊 Obsidian 知识库分析报告
-
-**生成时间**: 2026-01-12 14:30:00
-**知识库路径**: `/path/to/vault`
-
-## 📈 总体概况
-- **笔记总数**: 150 篇
-- **总字数**: 45,678 字
-- **总链接数**: 234 个
-- **双向链接**: 45 对
-
-## 🏝️ 孤岛笔记
-发现 23 篇孤岛笔记...
-```
-
-### 质量评分报告
-
-```
-============================================================
-  📊 质量统计
-============================================================
-  总笔记数:  150
-  平均分:    72.5
-  
-  评级分布:
-    A:  25 ( 16.7%) ████████
-    B:  45 ( 30.0%) ███████████████
-    C:  35 ( 23.3%) ███████████
-```
-
-## 🛠️ 项目结构
-
-```
-obsidian-knowledge-assistant/
-├── src/                    # 源代码
-│   ├── core/              # 核心模块
-│   │   ├── analyzer.py    # 笔记分析器
-│   │   ├── quality_scorer.py   # 质量评分
-│   │   └── similarity.py  # 相似度分析
-│   ├── exporters/         # 数据导出
-│   │   ├── exporter.py    # 导出器基类
-│   │   └── report_generator.py  # 报告生成
-│   ├── main.py           # 主程序入口
-│   ├── quality.py        # 质量评分工具
-│   ├── search.py         # 搜索工具
-│   └── similar.py        # 相似度分析工具
-├── config/               # 配置文件
-│   └── set_env.sh       # 环境配置
-├── docs/                # 文档
-│   ├── installation.md
-│   ├── usage.md
-│   ├── features.md
-│   └── examples.md
-├── tests/               # 测试文件
-├── examples/            # 示例文件
-├── .gitignore
-├── LICENSE
-├── README.md
-└── requirements.txt
-```
-
-## ⚙️ 配置选项
-
-所有配置都在 `config/set_env.sh` 中：
-
-```bash
-# Vault 配置
-export VAULT_PATH="/path/to/vault"
-export MULTI_VAULT_PATHS=""  # 多 vault 支持
-
-# 排除配置
-export EXCLUDE_FOLDERS=".obsidian,.trash,templates"
-export EXCLUDE_NOTES=""  # 支持通配符
-
-# 质量评分配置
-export SCORE_WEIGHT_WORDS="0.25"
-export SCORE_WEIGHT_LINKS="0.35"
-export QUALITY_MIN_WORDS="100"
-
-# 相似度配置
-export SIMILARITY_MIN_THRESHOLD="0.3"
-```
-
-## 🤝 贡献指南
+## 贡献指南
 
 我们欢迎各种形式的贡献！
 
@@ -228,47 +220,46 @@ export SIMILARITY_MIN_THRESHOLD="0.3"
 
 ```bash
 # 克隆你的 fork
-git clone https://github.com/yourusername/obsidian-knowledge-assistant.git
+git clone https://github.com/yourusername/obsidian-assistant.git
 
 # 创建虚拟环境（可选）
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # 运行测试
-python -m pytest tests/
+pytest -q
 ```
 
-## 📝 更新日志
+## 更新日志
 
 查看 [CHANGELOG.md](CHANGELOG.md) 了解版本历史和更新内容。
 
-## 🐛 问题反馈
+## 问题反馈
 
 如果你遇到问题或有功能建议，请：
 
-1. 查看 [常见问题](docs/faq.md)
-2. 搜索 [已有 Issues](https://github.com/yourusername/obsidian-knowledge-assistant/issues)
-3. 创建新的 Issue 并提供详细信息
+1. 搜索 [已有 Issues](https://github.com/yourusername/obsidian-assistant/issues)
+2. 创建新的 Issue 并提供详细信息
 
-## 📄 许可证
+## 许可证
 
 本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
 
-## 🙏 致谢
+## 致谢
 
 - 感谢 [Obsidian](https://obsidian.md/) 提供优秀的知识管理工具
 - 感谢所有贡献者的付出
 
-## 🌟 Star History
+## Star History
 
-如果这个项目对你有帮助，请给一个 ⭐️！
+如果这个项目对你有帮助，请给一个 Star！
 
 ---
 
 <div align="center">
 
-**[⬆ 回到顶部](#obsidian-knowledge-assistant)**
+**[回到顶部](#obsidian-assistant)**
 
-Made with ❤️ for better knowledge management
+Made with care for better knowledge management
 
 </div>
