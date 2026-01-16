@@ -50,6 +50,16 @@ python -m pip install -e .
 oka --help
 ```
 
+### Config initialization
+
+`oka doctor --init-config` writes `oka.toml` in:
+
+- The vault root when `--vault` is provided.
+- Otherwise the current working directory.
+
+If `oka.toml` already exists, the command prints a notice and exits without
+overwriting.
+
 ## Directory contract (stable)
 
 The v1+ outputs live under these directories. The CLI scaffold creates the
