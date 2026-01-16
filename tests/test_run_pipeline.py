@@ -45,8 +45,18 @@ def test_run_produces_reports(tmp_path: Path) -> None:
     assert report_md.exists()
 
     json.loads(health.read_text(encoding="utf-8"))
-    json.loads(action_items.read_text(encoding="utf-8"))
+    action_payload = json.loads(action_items.read_text(encoding="utf-8"))
     json.loads(run_summary.read_text(encoding="utf-8"))
+
+    items = action_payload.get("items", [])
+    assert items, "expected action items to be generated"
+    assert any(item.get("risk_class") == "A" for item in items)
+    for item in items:
+        reason = item.get("reason", {})
+        assert "content_sim" in reason
+        assert "title_sim" in reason
+        assert "link_overlap" in reason
+        assert "filters" in reason
 
 
 def test_run_json_stdout(tmp_path: Path) -> None:
