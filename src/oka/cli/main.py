@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from oka import __version__
 from oka.core.apply import apply_action_items, rollback_run, write_run_log
-from oka.core.config import load_config
+from oka.core.config import get_bool, get_int, get_str, load_config
 from oka.core.doctor import run_doctor
 from oka.core.pipeline import run_pipeline, write_json, write_report
 from oka.core.storage import prune_run_logs
@@ -74,6 +74,12 @@ def _run_command(args: argparse.Namespace) -> int:
 
     if args.apply:
         run_id = pipeline_output.run_summary.get("run_id", "unknown")
+        config_data = load_config(vault_path, base_dir)
+        max_wait_sec = get_int(config_data, "apply", "max_wait_sec", 30)
+        offline_marker = get_str(config_data, "apply", "offline_lock_marker", ".nosync")
+        offline_cleanup = get_bool(
+            config_data, "apply", "offline_lock_cleanup", True
+        )
         apply_info = {
             "interactive": not args.yes,
             "ttl_sec": 60,
@@ -87,7 +93,15 @@ def _run_command(args: argparse.Namespace) -> int:
             yes=args.yes,
             wait_sec=args.wait,
             force=args.force,
+            max_wait_sec=max_wait_sec,
+            offline_lock=args.offline_lock,
+            offline_lock_marker=offline_marker,
+            offline_lock_cleanup=offline_cleanup,
         )
+        apply_info["waited_sec"] = result.waited_sec
+        apply_info["starvation"] = result.starvation
+        apply_info["fallback"] = result.fallback
+        apply_info["offline_lock"] = result.offline_lock
         write_run_log(
             base_dir=base_dir,
             run_id=run_id,
@@ -96,7 +110,13 @@ def _run_command(args: argparse.Namespace) -> int:
             conflicts=result.conflicts,
             apply_info=apply_info,
         )
-        config_data = load_config(vault_path, base_dir)
+        _update_run_summary(
+            output_dir,
+            waited_sec=result.waited_sec,
+            starvation=result.starvation,
+            fallback=result.fallback,
+            offline_lock=result.offline_lock,
+        )
         prune_run_logs(base_dir, config_data)
         return result.return_code
 
@@ -161,17 +181,19 @@ def _default_config_text() -> str:
             "",
             "[apply]",
             "interactive = true",
-        "max_wait_sec = 30",
-        "",
-        "[performance]",
-        "max_mem_mb = 0",
-        "timeout_sec = 0",
-        "max_workers = 0",
-        "top_terms = 30",
-        "",
-        "[scan]",
-        "max_file_mb = 5",
-        'exclude_dirs = [".obsidian"]',
+            "max_wait_sec = 30",
+            'offline_lock_marker = ".nosync"',
+            "offline_lock_cleanup = true",
+            "",
+            "[performance]",
+            "max_mem_mb = 0",
+            "timeout_sec = 0",
+            "max_workers = 0",
+            "top_terms = 30",
+            "",
+            "[scan]",
+            "max_file_mb = 5",
+            'exclude_dirs = [".obsidian"]',
             "",
             "[format]",
             "normalize_on_write = false",
@@ -351,6 +373,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Clear stale write lease before apply.",
     )
     run_parser.add_argument(
+        "--offline-lock",
+        action="store_true",
+        help="Create an offline lock marker during apply.",
+    )
+    run_parser.add_argument(
         "--profile",
         default="conservative",
         help="Profile preset (placeholder).",
@@ -401,6 +428,30 @@ def _rollback_command(args: argparse.Namespace) -> int:
     base_dir = Path.cwd()
     result = rollback_run(args.run_id, base_dir, item_id=args.item, target_path=args.file)
     return result.return_code
+
+
+def _update_run_summary(
+    output_dir: Path,
+    waited_sec: int,
+    starvation: bool,
+    fallback: str,
+    offline_lock: bool,
+) -> None:
+    summary_path = output_dir / "run-summary.json"
+    if not summary_path.exists():
+        return
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    apply_section = summary.get("apply", {})
+    apply_section.update(
+        {
+            "waited_sec": waited_sec,
+            "starvation": starvation,
+            "fallback": fallback,
+            "offline_lock": offline_lock,
+        }
+    )
+    summary["apply"] = apply_section
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
 
 def main(argv: Optional[List[str]] = None) -> int:

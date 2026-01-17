@@ -18,6 +18,10 @@ class ApplyResult:
     return_code: int
     conflicts: List[Dict[str, object]]
     changes: List[Dict[str, object]]
+    waited_sec: int
+    starvation: bool
+    fallback: str
+    offline_lock: bool
 
 
 def _now_iso() -> str:
@@ -65,22 +69,51 @@ def _latest_mtime(path: Path) -> Optional[float]:
     return latest
 
 
-def wait_for_quiet(vault_path: Path, max_wait_sec: int, window_sec: int = 2) -> bool:
+def wait_for_quiet(
+    vault_path: Path, max_wait_sec: int, window_sec: int = 2
+) -> Tuple[bool, int]:
     obsidian_dir = vault_path / ".obsidian"
     if not obsidian_dir.exists():
-        return True
+        return True, 0
 
     start = time.monotonic()
+    last_wait = 0
     while True:
         first = _latest_mtime(obsidian_dir)
         time.sleep(window_sec)
         second = _latest_mtime(obsidian_dir)
         if first == second:
-            return True
+            waited = int(time.monotonic() - start)
+            return True, waited
         if max_wait_sec <= 0:
-            return False
+            return False, int(time.monotonic() - start)
+        last_wait = int(time.monotonic() - start)
+        if last_wait >= max_wait_sec:
+            return False, last_wait
         if time.monotonic() - start >= max_wait_sec:
-            return False
+            return False, int(time.monotonic() - start)
+
+
+def _offline_lock_path(vault_path: Path, marker: str) -> Path:
+    return vault_path / marker
+
+
+def create_offline_lock(vault_path: Path, marker: str) -> Optional[Path]:
+    if not marker:
+        return None
+    marker_path = _offline_lock_path(vault_path, marker)
+    marker_path.parent.mkdir(parents=True, exist_ok=True)
+    marker_path.write_text("oka offline lock\n", encoding="utf-8")
+    return marker_path
+
+
+def remove_offline_lock(marker_path: Optional[Path]) -> None:
+    if marker_path is None:
+        return
+    try:
+        marker_path.unlink()
+    except FileNotFoundError:
+        pass
 
 
 def _lock_stale(data: Dict[str, object]) -> bool:
@@ -352,6 +385,20 @@ def _prompt_confirmation(summary: Dict[str, object]) -> bool:
             print("Please answer y, n, or preview.")
 
 
+def _prompt_starvation_mode() -> str:
+    print("\nVault sync activity detected.")
+    print("Choose a fallback mode:")
+    print("- append: apply append-block actions only")
+    print("- all: apply all Class A actions")
+    print("- abort: stop without applying changes")
+
+    while True:
+        answer = input("Fallback [append/all/abort]: ").strip().lower()
+        if answer in ("append", "all", "abort"):
+            return answer
+        print("Please answer append, all, or abort.")
+
+
 def apply_action_items(
     vault_path: Path,
     base_dir: Path,
@@ -360,17 +407,39 @@ def apply_action_items(
     yes: bool,
     wait_sec: int,
     force: bool,
+    max_wait_sec: int,
+    offline_lock: bool,
+    offline_lock_marker: str,
+    offline_lock_cleanup: bool,
     ttl_sec: int = 60,
 ) -> ApplyResult:
-    if not wait_for_quiet(vault_path, wait_sec):
-        print("Preflight failed: vault is active. Try --wait to retry.")
-        return ApplyResult(return_code=20, conflicts=[], changes=[])
+    wait_limit = 0
+    if wait_sec > 0:
+        if max_wait_sec > 0:
+            wait_limit = min(wait_sec, max_wait_sec)
+        else:
+            wait_limit = 0
+
+    window_sec = 1 if wait_limit <= 0 else 2
+    quiet, waited_sec = wait_for_quiet(vault_path, wait_limit, window_sec=window_sec)
+    starvation = not quiet
+    fallback = "none"
+    offline_lock_created = False
+    offline_lock_path = None
 
     locks_dir = base_dir / "locks"
     ok, message = acquire_write_lease(locks_dir, ttl_sec, force)
     if not ok:
         print(f"Write lease denied: {message}")
-        return ApplyResult(return_code=12, conflicts=[], changes=[])
+        return ApplyResult(
+            return_code=12,
+            conflicts=[],
+            changes=[],
+            waited_sec=waited_sec,
+            starvation=starvation,
+            fallback=fallback,
+            offline_lock=offline_lock_created,
+        )
 
     conflicts: List[Dict[str, object]] = []
     changes: List[Dict[str, object]] = []
@@ -381,20 +450,83 @@ def apply_action_items(
 
     try:
         all_items = action_items.get("items", [])
-        applicable = [
+        class_a_items = [
             item
             for item in all_items
             if item.get("risk_class") == "A"
             and item.get("type") in {"append_related_links_section", "add_frontmatter_fields"}
         ]
+        append_items = [
+            item
+            for item in class_a_items
+            if item.get("type") == "append_related_links_section"
+        ]
+        applicable = class_a_items
+
+        if starvation:
+            if not yes:
+                choice = _prompt_starvation_mode()
+                if choice == "abort":
+                    print("Apply aborted due to sync activity.")
+                    print("Tip: pause sync or watch the vault for a quiet window, then retry.")
+                    return ApplyResult(
+                        return_code=11,
+                        conflicts=[],
+                        changes=[],
+                        waited_sec=waited_sec,
+                        starvation=True,
+                        fallback="abort",
+                        offline_lock=offline_lock_created,
+                    )
+                if choice == "append":
+                    applicable = append_items
+                    fallback = "append_only"
+                else:
+                    fallback = "all_class_a"
+            else:
+                applicable = append_items
+                fallback = "append_only"
+
+            if offline_lock:
+                offline_lock_path = create_offline_lock(vault_path, offline_lock_marker)
+                offline_lock_created = offline_lock_path is not None
+                fallback = "offline_lock" if fallback == "none" else fallback
 
         if not applicable:
-            return ApplyResult(return_code=0, conflicts=[], changes=[])
+            if starvation:
+                print("No applicable actions available under starvation fallback.")
+                print("Tip: pause sync or watch the vault for a quiet window, then retry.")
+                return ApplyResult(
+                    return_code=11,
+                    conflicts=[],
+                    changes=[],
+                    waited_sec=waited_sec,
+                    starvation=True,
+                    fallback=fallback or "none",
+                    offline_lock=offline_lock_created,
+                )
+            return ApplyResult(
+                return_code=0,
+                conflicts=[],
+                changes=[],
+                waited_sec=waited_sec,
+                starvation=False,
+                fallback="none",
+                offline_lock=offline_lock_created,
+            )
 
         summary = _summarize_items(applicable)
         if not yes:
             if not _prompt_confirmation(summary):
-                return ApplyResult(return_code=0, conflicts=[], changes=[])
+                return ApplyResult(
+                    return_code=0,
+                    conflicts=[],
+                    changes=[],
+                    waited_sec=waited_sec,
+                    starvation=starvation,
+                    fallback=fallback,
+                    offline_lock=offline_lock_created,
+                )
 
         for item in applicable:
             target_path = item.get("target_path") or ""
@@ -478,10 +610,20 @@ def apply_action_items(
         if conflicts:
             _ensure_howto(conflicts_dir)
     finally:
+        if offline_lock_cleanup:
+            remove_offline_lock(offline_lock_path)
         release_write_lease(locks_dir)
 
     return_code = 2 if conflicts else 0
-    return ApplyResult(return_code=return_code, conflicts=conflicts, changes=changes)
+    return ApplyResult(
+        return_code=return_code,
+        conflicts=conflicts,
+        changes=changes,
+        waited_sec=waited_sec,
+        starvation=starvation,
+        fallback=fallback,
+        offline_lock=offline_lock_created,
+    )
 
 
 def write_run_log(
@@ -626,7 +768,15 @@ def _rollback_full(
 
     if conflicts:
         _ensure_howto(run_dir / "conflicts")
-    return ApplyResult(return_code=2 if conflicts else 0, conflicts=conflicts, changes=changes)
+    return ApplyResult(
+        return_code=2 if conflicts else 0,
+        conflicts=conflicts,
+        changes=changes,
+        waited_sec=0,
+        starvation=False,
+        fallback="none",
+        offline_lock=False,
+    )
 
 
 def rollback_run(
@@ -637,11 +787,27 @@ def rollback_run(
 ) -> ApplyResult:
     if item_id and target_path:
         print("Error: use either --item or --file, not both.")
-        return ApplyResult(return_code=20, conflicts=[], changes=[])
+        return ApplyResult(
+            return_code=20,
+            conflicts=[],
+            changes=[],
+            waited_sec=0,
+            starvation=False,
+            fallback="none",
+            offline_lock=False,
+        )
 
     data, run_dir = _load_run_log(run_id, base_dir)
     if data is None:
-        return ApplyResult(return_code=20, conflicts=[], changes=[])
+        return ApplyResult(
+            return_code=20,
+            conflicts=[],
+            changes=[],
+            waited_sec=0,
+            starvation=False,
+            fallback="none",
+            offline_lock=False,
+        )
 
     changes = data.get("changes", [])
     vault_path = Path(data.get("vault", "."))
@@ -651,17 +817,41 @@ def rollback_run(
             selected = [change for change in changes if change.get("action_id") == item_id]
             if not selected:
                 print(f"No matching action for id: {item_id}")
-                return ApplyResult(return_code=20, conflicts=[], changes=[])
+                return ApplyResult(
+                    return_code=20,
+                    conflicts=[],
+                    changes=[],
+                    waited_sec=0,
+                    starvation=False,
+                    fallback="none",
+                    offline_lock=False,
+                )
         else:
             selected = [change for change in changes if change.get("target_path") == target_path]
             if not selected:
                 print(f"No matching changes for file: {target_path}")
-                return ApplyResult(return_code=20, conflicts=[], changes=[])
+                return ApplyResult(
+                    return_code=20,
+                    conflicts=[],
+                    changes=[],
+                    waited_sec=0,
+                    starvation=False,
+                    fallback="none",
+                    offline_lock=False,
+                )
 
         for change in selected:
             if change.get("risk_class") != "A":
                 print("Partial rollback only supports Class A actions. Use Git revert for others.")
-                return ApplyResult(return_code=20, conflicts=[], changes=[])
+                return ApplyResult(
+                    return_code=20,
+                    conflicts=[],
+                    changes=[],
+                    waited_sec=0,
+                    starvation=False,
+                    fallback="none",
+                    offline_lock=False,
+                )
 
         _dependency_notice(selected)
         conflicts: List[Dict[str, object]] = []
@@ -670,6 +860,14 @@ def rollback_run(
 
         if conflicts:
             _ensure_howto(run_dir / "conflicts")
-        return ApplyResult(return_code=2 if conflicts else 0, conflicts=conflicts, changes=selected)
+        return ApplyResult(
+            return_code=2 if conflicts else 0,
+            conflicts=conflicts,
+            changes=selected,
+            waited_sec=0,
+            starvation=False,
+            fallback="none",
+            offline_lock=False,
+        )
 
     return _rollback_full(changes, run_dir, vault_path)

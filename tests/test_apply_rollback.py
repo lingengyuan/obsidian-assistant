@@ -5,6 +5,7 @@ import shutil
 from pathlib import Path
 
 from cli_helpers import run_oka
+from oka.core.apply import remove_anchor_block
 
 
 def _copy_vault(tmp_path: Path) -> Path:
@@ -12,6 +13,11 @@ def _copy_vault(tmp_path: Path) -> Path:
     fixture_vault = repo_root / "tests" / "fixtures" / "sample_vault"
     target = tmp_path / "vault"
     shutil.copytree(fixture_vault, target)
+    for md_file in target.rglob("*.md"):
+        content = md_file.read_text(encoding="utf-8")
+        updated, _ = remove_anchor_block(content, "oka_related_v1")
+        if updated != content:
+            md_file.write_text(updated, encoding="utf-8")
     return target
 
 

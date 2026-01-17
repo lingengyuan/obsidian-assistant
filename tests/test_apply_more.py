@@ -56,6 +56,10 @@ def test_apply_missing_file_conflict(tmp_path: Path) -> None:
         yes=True,
         wait_sec=0,
         force=True,
+        max_wait_sec=0,
+        offline_lock=False,
+        offline_lock_marker=".nosync",
+        offline_lock_cleanup=True,
     )
     assert result.return_code == 2
     conflict_note = tmp_path / "reports" / "runs" / "run_missing" / "conflicts" / "missing.md.note"
