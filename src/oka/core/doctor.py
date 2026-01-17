@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from oka.core.i18n import t
 from oka.core.pipeline import scan_vault
 
 
@@ -112,7 +113,9 @@ def _detect_encoding_and_eol(paths: List[Path]) -> Dict[str, object]:
     return {"encoding": encoding_counts, "line_endings": line_endings}
 
 
-def run_doctor(vault_path: Path, base_dir: Path, max_file_mb: int) -> Dict[str, object]:
+def run_doctor(
+    vault_path: Path, base_dir: Path, max_file_mb: int, lang: str = "en"
+) -> Dict[str, object]:
     scan_result = scan_vault(vault_path, max_file_mb=max_file_mb)
     encoding_report = _detect_encoding_and_eol(scan_result.md_files)
 
@@ -128,13 +131,13 @@ def run_doctor(vault_path: Path, base_dir: Path, max_file_mb: int) -> Dict[str, 
 
     recommendations: List[str] = []
     if encoding_report["encoding"]["utf8_bom"] or encoding_report["encoding"]["non_utf8"]:
-        recommendations.append("Consider enabling format.normalize_on_write in oka.toml.")
+        recommendations.append(t(lang, "doctor_rec_normalize"))
     if encoding_report["line_endings"]["mixed"]:
-        recommendations.append("Normalize line endings to LF or CRLF for stable hashes.")
+        recommendations.append(t(lang, "doctor_rec_line_endings"))
     if write_lease.present and write_lease.stale:
-        recommendations.append("Remove stale write-lease.json if no active runs exist.")
+        recommendations.append(t(lang, "doctor_rec_write_lease"))
     if offline_lock.present and offline_lock.stale:
-        recommendations.append("Remove stale offline-lock.json if no active runs exist.")
+        recommendations.append(t(lang, "doctor_rec_offline_lock"))
 
     return {
         "version": "1",

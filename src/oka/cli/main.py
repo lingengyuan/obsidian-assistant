@@ -11,6 +11,7 @@ from typing import List, Optional
 from oka import __version__
 from oka.core.apply import apply_action_items, rollback_run, write_run_log
 from oka.core.config import get_bool, get_int, get_str, load_config
+from oka.core.i18n import t
 from oka.core.doctor import run_doctor
 from oka.core.pipeline import run_pipeline, write_json, write_report
 from oka.core.storage import prune_run_logs
@@ -32,17 +33,20 @@ def _ensure_layout(base_dir: Path) -> None:
 
 
 def _run_command(args: argparse.Namespace) -> int:
+    lang = args.lang or "en"
     vault_path = _resolve_vault_path(args.vault)
     if vault_path is None:
-        print("Error: --vault or VAULT_PATH is required.", file=sys.stderr)
+        print(t(lang, "error_vault_required"), file=sys.stderr)
         return 2
     if not vault_path.exists():
-        print(f"Error: vault path does not exist: {vault_path}", file=sys.stderr)
+        print(t(lang, "error_vault_missing", vault=vault_path), file=sys.stderr)
         return 2
 
     base_dir = Path.cwd()
     _ensure_layout(base_dir)
     output_dir = base_dir / "reports"
+    config_data = load_config(vault_path, base_dir)
+    lang = args.lang or get_str(config_data, "i18n", "language", "en")
     try:
         max_file_mb = int(os.environ.get("OKA_MAX_FILE_MB", "5"))
     except ValueError:
@@ -53,6 +57,7 @@ def _run_command(args: argparse.Namespace) -> int:
         base_dir=base_dir,
         profile=args.profile,
         max_file_mb=max_file_mb,
+        lang=lang,
     )
 
     write_json(output_dir / "health.json", pipeline_output.health)
@@ -69,18 +74,22 @@ def _run_command(args: argparse.Namespace) -> int:
         }
         json.dump(payload, sys.stdout)
         sys.stdout.write("\n")
-        _print_summary(pipeline_output.run_summary, file=sys.stderr)
+        _print_summary(pipeline_output.run_summary, file=sys.stderr, lang=lang)
     else:
-        _print_summary(pipeline_output.run_summary, file=sys.stdout)
+        _print_summary(pipeline_output.run_summary, file=sys.stdout, lang=lang)
 
     if args.apply:
         run_id = pipeline_output.run_summary.get("run_id", "unknown")
-        config_data = load_config(vault_path, base_dir)
         max_wait_sec = get_int(config_data, "apply", "max_wait_sec", 30)
         offline_marker = get_str(config_data, "apply", "offline_lock_marker", ".nosync")
         offline_cleanup = get_bool(
             config_data, "apply", "offline_lock_cleanup", True
         )
+        git_policy = get_str(config_data, "apply.git", "policy", "require_clean")
+        git_auto_commit = get_bool(
+            config_data, "apply.git", "auto_commit", False
+        )
+        git_auto_stash = git_policy == "auto_stash"
         apply_info = {
             "interactive": not args.yes,
             "ttl_sec": 60,
@@ -98,11 +107,16 @@ def _run_command(args: argparse.Namespace) -> int:
             offline_lock=args.offline_lock,
             offline_lock_marker=offline_marker,
             offline_lock_cleanup=offline_cleanup,
+            git_policy=git_policy,
+            git_auto_stash=git_auto_stash,
+            git_auto_commit=git_auto_commit,
+            lang=lang,
         )
         apply_info["waited_sec"] = result.waited_sec
         apply_info["starvation"] = result.starvation
         apply_info["fallback"] = result.fallback
         apply_info["offline_lock"] = result.offline_lock
+        apply_info["git"] = result.git_info
         write_run_log(
             base_dir=base_dir,
             run_id=run_id,
@@ -130,14 +144,17 @@ def _doctor_command(args: argparse.Namespace) -> int:
 
     if args.init_config:
         target_dir = _resolve_vault_path(args.vault) or base_dir
-        return _init_config(target_dir)
+        lang = args.lang or "en"
+        return _init_config(target_dir, lang)
 
     vault_path = _resolve_vault_path(args.vault)
     if vault_path is None:
-        print("Error: --vault or VAULT_PATH is required.", file=sys.stderr)
+        lang = args.lang or "en"
+        print(t(lang, "error_vault_required"), file=sys.stderr)
         return 2
     if not vault_path.exists():
-        print(f"Error: vault path does not exist: {vault_path}", file=sys.stderr)
+        lang = args.lang or "en"
+        print(t(lang, "error_vault_missing", vault=vault_path), file=sys.stderr)
         return 2
 
     try:
@@ -145,23 +162,30 @@ def _doctor_command(args: argparse.Namespace) -> int:
     except ValueError:
         max_file_mb = 5
 
-    report = run_doctor(vault_path=vault_path, base_dir=base_dir, max_file_mb=max_file_mb)
-    _print_doctor_report(report)
+    config_data = load_config(vault_path, base_dir)
+    lang = args.lang or get_str(config_data, "i18n", "language", "en")
+    report = run_doctor(
+        vault_path=vault_path, base_dir=base_dir, max_file_mb=max_file_mb, lang=lang
+    )
+    _print_doctor_report(report, lang=lang)
     return 0
 
 
 def _watch_command(args: argparse.Namespace) -> int:
     vault_path = _resolve_vault_path(args.vault)
     if vault_path is None:
-        print("Error: --vault or VAULT_PATH is required.", file=sys.stderr)
+        lang = args.lang or "en"
+        print(t(lang, "error_vault_required"), file=sys.stderr)
         return 2
     if not vault_path.exists():
-        print(f"Error: vault path does not exist: {vault_path}", file=sys.stderr)
+        lang = args.lang or "en"
+        print(t(lang, "error_vault_missing", vault=vault_path), file=sys.stderr)
         return 2
 
     base_dir = Path.cwd()
     _ensure_layout(base_dir)
     config_data = load_config(vault_path, base_dir)
+    lang = args.lang or get_str(config_data, "i18n", "language", "en")
 
     watch_loop(
         vault_path=vault_path,
@@ -179,19 +203,20 @@ def _watch_command(args: argparse.Namespace) -> int:
         interval_sec=args.interval,
         once=args.once,
         low_priority=not args.no_low_priority,
+        lang=lang,
     )
     return 0
 
 
-def _init_config(target_dir: Path) -> int:
+def _init_config(target_dir: Path, lang: str) -> int:
     target_dir = target_dir.resolve()
     config_path = target_dir / "oka.toml"
     if config_path.exists():
-        print(f"oka.toml already exists at {config_path}.", file=sys.stderr)
+        print(t(lang, "config_exists", path=config_path), file=sys.stderr)
         return 0
 
     config_path.write_text(_default_config_text(), encoding="utf-8")
-    print(f"Created {config_path}")
+    print(t(lang, "config_created", path=config_path))
     return 0
 
 
@@ -202,6 +227,9 @@ def _default_config_text() -> str:
             "",
             "[profile]",
             'name = "conservative"',
+            "",
+            "[i18n]",
+            'language = "en"',
             "",
             "[storage]",
             'reports_dir = "reports"',
@@ -218,6 +246,10 @@ def _default_config_text() -> str:
             "max_wait_sec = 30",
             'offline_lock_marker = ".nosync"',
             "offline_lock_cleanup = true",
+            "",
+            "[apply.git]",
+            'policy = "require_clean"',
+            "auto_commit = false",
             "",
             "[performance]",
             "max_mem_mb = 0",
@@ -253,7 +285,7 @@ def _default_config_text() -> str:
     )
 
 
-def _print_doctor_report(report: dict) -> None:
+def _print_doctor_report(report: dict, lang: str) -> None:
     path_checks = report.get("path_checks", {})
     locks = report.get("locks", {})
     encoding = report.get("encoding", {})
@@ -261,11 +293,13 @@ def _print_doctor_report(report: dict) -> None:
     scan = report.get("scan", {})
     skipped = scan.get("skipped", {})
 
-    print("Doctor Report")
+    print(t(lang, "doctor_report"))
     print("-------------")
-    print(f"Vault: {report.get('vault')}")
+    print(t(lang, "doctor_vault", vault=report.get("vault")))
     print(
-        "Path checks: exists={exists} is_dir={is_dir} readable={readable}".format(
+        t(
+            lang,
+            "doctor_path_checks",
             exists=path_checks.get("exists"),
             is_dir=path_checks.get("is_dir"),
             readable=path_checks.get("readable"),
@@ -274,7 +308,9 @@ def _print_doctor_report(report: dict) -> None:
     write_lease = locks.get("write_lease", {})
     offline_lock = locks.get("offline_lock", {})
     print(
-        "Locks: write-lease present={present} stale={stale} | offline-lock present={opresent} stale={ostale}".format(
+        t(
+            lang,
+            "doctor_locks",
             present=write_lease.get("present"),
             stale=write_lease.get("stale"),
             opresent=offline_lock.get("present"),
@@ -282,13 +318,17 @@ def _print_doctor_report(report: dict) -> None:
         )
     )
     print(
-        "Encoding: utf8_bom={bom} non_utf8={non_utf8}".format(
+        t(
+            lang,
+            "doctor_encoding",
             bom=encoding.get("utf8_bom", 0),
             non_utf8=encoding.get("non_utf8", 0),
         )
     )
     print(
-        "Line endings: lf={lf} crlf={crlf} mixed={mixed} none={none}".format(
+        t(
+            lang,
+            "doctor_line_endings",
             lf=line_endings.get("lf", 0),
             crlf=line_endings.get("crlf", 0),
             mixed=line_endings.get("mixed", 0),
@@ -296,8 +336,9 @@ def _print_doctor_report(report: dict) -> None:
         )
     )
     print(
-        "Scan: scanned_files={scanned} skipped(non_md={non_md}, too_large={too_large}, "
-        "no_permission={no_permission})".format(
+        t(
+            lang,
+            "doctor_scan",
             scanned=scan.get("scanned_files", 0),
             non_md=skipped.get("non_md", 0),
             too_large=skipped.get("too_large", 0),
@@ -307,12 +348,12 @@ def _print_doctor_report(report: dict) -> None:
 
     recommendations = report.get("recommendations", [])
     if recommendations:
-        print("Recommendations:")
+        print(t(lang, "doctor_recommendations"))
         for item in recommendations:
             print(f"- {item}")
 
 
-def _print_summary(summary: dict, file) -> None:
+def _print_summary(summary: dict, file, lang: str) -> None:
     timing = summary.get("timing", {})
     stages = timing.get("stages", {})
     io = summary.get("io", {})
@@ -322,12 +363,13 @@ def _print_summary(summary: dict, file) -> None:
     skipped_by_reason = incremental.get("skipped_by_reason", {})
 
     print("", file=file)
-    print("Performance Summary", file=file)
+    print(t(lang, "performance_summary"), file=file)
     print("-------------------", file=file)
-    print(f"Total: {timing.get('total_ms', 0)} ms", file=file)
+    print(t(lang, "performance_total", total=timing.get("total_ms", 0)), file=file)
     print(
-        "Stages: scan={scan}ms parse={parse}ms analyze={analyze}ms "
-        "recommend={recommend}ms plan={plan}ms report={report}ms".format(
+        t(
+            lang,
+            "performance_stages",
             scan=stages.get("scan_ms", 0),
             parse=stages.get("parse_ms", 0),
             analyze=stages.get("analyze_ms", 0),
@@ -338,8 +380,9 @@ def _print_summary(summary: dict, file) -> None:
         file=file,
     )
     print(
-        "I/O: scanned_files={scanned} skipped(non_md={non_md}, too_large={too_large}, "
-        "no_permission={no_permission})".format(
+        t(
+            lang,
+            "performance_io",
             scanned=io.get("scanned_files", 0),
             non_md=skipped.get("non_md", 0),
             too_large=skipped.get("too_large", 0),
@@ -348,7 +391,9 @@ def _print_summary(summary: dict, file) -> None:
         file=file,
     )
     print(
-        "Cache: present={present} hit_rate={hit_rate} incremental_updated={updated}".format(
+        t(
+            lang,
+            "performance_cache",
             present=cache.get("present", False),
             hit_rate=cache.get("hit_rate", 0.0),
             updated=cache.get("incremental_updated", 0),
@@ -356,12 +401,12 @@ def _print_summary(summary: dict, file) -> None:
         file=file,
     )
     if "fast_path" in summary:
-        print(f"Fast-path: {summary.get('fast_path')}", file=file)
-    if skipped_by_reason:
         print(
-            "Skipped by reason: {reasons}".format(reasons=skipped_by_reason),
+            t(lang, "performance_fast_path", fast_path=summary.get("fast_path")),
             file=file,
         )
+    if skipped_by_reason:
+        print(t(lang, "performance_skipped_by_reason", reasons=skipped_by_reason), file=file)
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -421,6 +466,10 @@ def build_parser() -> argparse.ArgumentParser:
         default="conservative",
         help="Profile preset (placeholder).",
     )
+    run_parser.add_argument(
+        "--lang",
+        help="Output language (en or zh).",
+    )
     run_parser.set_defaults(func=_run_command)
 
     doctor_parser = subparsers.add_parser(
@@ -436,6 +485,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--init-config",
         action="store_true",
         help="Write oka.toml template to vault root or cwd.",
+    )
+    doctor_parser.add_argument(
+        "--lang",
+        help="Output language (en or zh).",
     )
     doctor_parser.set_defaults(func=_doctor_command)
 
@@ -457,6 +510,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--file",
         type=str,
         help="Rollback Class A changes for a specific file path.",
+    )
+    rollback_parser.add_argument(
+        "--lang",
+        help="Output language (en or zh).",
     )
     rollback_parser.set_defaults(func=_rollback_command)
 
@@ -495,6 +552,10 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable low-priority scheduling attempt.",
     )
+    watch_parser.add_argument(
+        "--lang",
+        help="Output language (en or zh).",
+    )
     watch_parser.set_defaults(func=_watch_command)
 
     return parser
@@ -502,7 +563,14 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _rollback_command(args: argparse.Namespace) -> int:
     base_dir = Path.cwd()
-    result = rollback_run(args.run_id, base_dir, item_id=args.item, target_path=args.file)
+    lang = args.lang or "en"
+    result = rollback_run(
+        args.run_id,
+        base_dir,
+        item_id=args.item,
+        target_path=args.file,
+        lang=lang,
+    )
     return result.return_code
 
 

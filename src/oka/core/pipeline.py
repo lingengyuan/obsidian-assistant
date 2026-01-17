@@ -13,6 +13,7 @@ from uuid import uuid4
 
 from oka.core.config import get_float, get_int, get_str, load_config
 from oka.core.index import CacheRecord, IndexStore, decode_json, encode_json
+from oka.core.i18n import t
 from oka.core.scoring import (
     ScoringConfig,
     build_reason,
@@ -521,10 +522,10 @@ def _derive_aliases(title: str) -> List[str]:
 
 
 def _build_related_block(
-    note: ParsedNote, suggestions: List[Dict[str, object]]
+    note: ParsedNote, suggestions: List[Dict[str, object]], lang: str
 ) -> Dict[str, object]:
     anchor = "oka_related_v1"
-    lines = ["## Related", f"<!-- {anchor} -->"]
+    lines = [t(lang, "related_heading"), f"<!-- {anchor} -->"]
     for suggestion in suggestions:
         title = suggestion["title"]
         confidence = suggestion["confidence"]
@@ -571,6 +572,7 @@ def recommend_notes(
     max_workers: int,
     timeout_sec: int,
     max_mem_mb: int,
+    lang: str = "en",
 ) -> RecommendationResult:
     notes = parse_result.notes
     downgrades: List[str] = []
@@ -691,7 +693,7 @@ def recommend_notes(
             related_map[idx], key=lambda item: item["confidence"], reverse=True
         )[:3]
         if suggestions:
-            related_blocks.append(_build_related_block(note, suggestions))
+            related_blocks.append(_build_related_block(note, suggestions, lang))
 
         keywords = _derive_keywords(note.content_tokens)
         aliases = _derive_aliases(note.title)
@@ -792,6 +794,7 @@ def build_plan(
     analysis: AnalysisResult,
     recommendations: RecommendationResult,
     config: ScoringConfig,
+    lang: str = "en",
 ) -> PlanResult:
     items: List[Dict[str, object]] = []
     for idx, target in enumerate(sorted(analysis.broken_links)[:5], start=1):
@@ -800,7 +803,7 @@ def build_plan(
             target_path = f"{target_path}.md"
         reason = build_reason(0.0, 0.0, 0.0, [], config)
         reason["kind"] = "broken_link_candidate"
-        reason["details"] = f"Link target '{target}' not found in vault."
+        reason["details"] = t(lang, "reason_broken_link", target=target)
         items.append(
             {
                 "id": f"act_{idx:04d}",
@@ -909,63 +912,68 @@ def build_report(
     recommendations: RecommendationResult,
     plan: PlanResult,
     config: ScoringConfig,
+    lang: str = "en",
 ) -> str:
     low_confidence = recommendations.low_confidence_count
     action_items_total = len(plan.items)
     lines = [
-        "# Obsidian Assistant Report",
+        f"# {t(lang, 'report_title')}",
         "",
-        f"Generated at: {_now_iso()}",
-        f"Vault: {vault_path}",
+        t(lang, "report_generated_at", timestamp=_now_iso()),
+        t(lang, "report_vault", vault=vault_path),
         "",
-        "## Summary",
+        t(lang, "report_summary"),
         "",
-        f"- Total notes: {analysis.total_notes}",
-        f"- Notes with frontmatter: {analysis.frontmatter_notes}",
-        f"- Total links: {analysis.total_links}",
-        f"- Broken link candidates: {len(analysis.broken_links)}",
-        f"- Orphan notes: {len(analysis.orphan_notes)}",
-        f"- Action items: {action_items_total}",
+        f"- {t(lang, 'report_metric_total_notes')}: {analysis.total_notes}",
+        f"- {t(lang, 'report_metric_frontmatter')}: {analysis.frontmatter_notes}",
+        f"- {t(lang, 'report_metric_total_links')}: {analysis.total_links}",
+        f"- {t(lang, 'report_metric_broken')}: {len(analysis.broken_links)}",
+        f"- {t(lang, 'report_metric_orphan')}: {len(analysis.orphan_notes)}",
+        f"- {t(lang, 'report_metric_actions')}: {action_items_total}",
         "",
-        "## Metrics",
+        t(lang, "report_metrics"),
         "",
-        "| Metric | Value |",
-        "| --- | --- |",
-        f"| Total notes | {analysis.total_notes} |",
-        f"| Notes with frontmatter | {analysis.frontmatter_notes} |",
-        f"| Total links | {analysis.total_links} |",
-        f"| Broken link candidates | {len(analysis.broken_links)} |",
-        f"| Orphan notes | {len(analysis.orphan_notes)} |",
-        f"| Action items | {action_items_total} |",
+        t(lang, "report_metric_header"),
+        t(lang, "report_metric_sep"),
+        f"| {t(lang, 'report_metric_total_notes')} | {analysis.total_notes} |",
+        f"| {t(lang, 'report_metric_frontmatter')} | {analysis.frontmatter_notes} |",
+        f"| {t(lang, 'report_metric_total_links')} | {analysis.total_links} |",
+        f"| {t(lang, 'report_metric_broken')} | {len(analysis.broken_links)} |",
+        f"| {t(lang, 'report_metric_orphan')} | {len(analysis.orphan_notes)} |",
+        f"| {t(lang, 'report_metric_actions')} | {action_items_total} |",
         "",
-        "## Next steps",
+        t(lang, "report_next_steps"),
         "",
-        "- Review orphan notes and connect them to existing topics.",
-        "- Investigate broken link candidates and fix or create targets.",
+        t(lang, "report_next_orphan"),
+        t(lang, "report_next_broken"),
     ]
     if recommendations.merge_previews:
-        lines.extend(
-            [
-                "",
-                "## Merge preview (read-only)",
-                "",
-            ]
-        )
+        lines.extend(["", t(lang, "report_merge_preview"), ""])
         for preview in recommendations.merge_previews:
             candidates = ", ".join(preview["candidates"])
             lines.append(
-                f"- {candidates} (avg confidence {preview['average_confidence']})"
+                t(
+                    lang,
+                    "report_merge_item",
+                    candidates=candidates,
+                    confidence=preview["average_confidence"],
+                )
             )
 
     if low_confidence > 0:
         lines.extend(
             [
                 "",
-                "## Tuning tips",
+                t(lang, "report_tuning"),
                 "",
-                f"- {low_confidence} suggestions are below confidence {config.low_confidence:.2f}.",
-                "- Adjust `scoring.w_content`, `scoring.w_title`, and `scoring.w_link` in oka.toml.",
-                "- Increase `filters.path_penalty` or switch `profile` to conservative to reduce noise.",
+                t(
+                    lang,
+                    "report_tuning_low",
+                    count=low_confidence,
+                    threshold=config.low_confidence,
+                ),
+                t(lang, "report_tuning_adjust"),
+                t(lang, "report_tuning_filters"),
             ]
         )
     return "\n".join(lines)
@@ -1018,12 +1026,14 @@ def build_run_summary(
 
 def write_json(path: Path, payload: Dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        json.dump(payload, handle, indent=2, ensure_ascii=False)
 
 
 def write_report(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(content)
 
 
 def run_pipeline(
@@ -1031,6 +1041,7 @@ def run_pipeline(
     base_dir: Path,
     profile: str,
     max_file_mb: int = 5,
+    lang: str = "en",
 ) -> PipelineOutput:
     run_id = _run_id()
     timings: Dict[str, int] = {}
@@ -1117,11 +1128,12 @@ def run_pipeline(
         max_workers=max_workers,
         timeout_sec=timeout_sec,
         max_mem_mb=max_mem_mb,
+        lang=lang,
     )
     timings["recommend_ms"] = int((time.perf_counter() - recommend_start) * 1000)
 
     plan_start = time.perf_counter()
-    plan = build_plan(analysis, recommendations, scoring_config)
+    plan = build_plan(analysis, recommendations, scoring_config, lang=lang)
     timings["plan_ms"] = int((time.perf_counter() - plan_start) * 1000)
 
     report_start = time.perf_counter()
@@ -1131,6 +1143,7 @@ def run_pipeline(
         recommendations,
         plan,
         scoring_config,
+        lang=lang,
     )
     timings["report_ms"] = int((time.perf_counter() - report_start) * 1000)
 

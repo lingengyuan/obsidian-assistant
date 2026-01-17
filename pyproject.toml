@@ -12,6 +12,9 @@ license = { text = "MIT" }
 authors = [{ name = "Obsidian Assistant Contributors" }]
 keywords = ["obsidian", "cli"]
 
+[project.optional-dependencies]
+build = ["pyinstaller>=6.0"]
+
 [project.scripts]
 oka = "oka.cli.main:main"
 

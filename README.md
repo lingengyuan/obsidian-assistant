@@ -32,6 +32,13 @@ Obsidian Assistant 是一个以安全只读为默认的命令行工具，专注�
 - **推荐系统**：metadata 建议（keywords/aliases/related）、Related 追加区块（Class A）、相似笔记合并预览（只读）
 - **可解释置信度**：reason 中包含分项得分与 filters
 - **Doctor 检查**：路径/权限、锁文件、UTF-8 BOM/非 UTF-8、LF/CRLF 混用
+- **增量索引**：`cache/index.sqlite` 持久化解析结果，命中时减少重复计算
+- **Watch 与快路径**：`oka watch` 低优先级更新索引，`oka run` 在缓存新鲜时 fast-path
+- **安全写入**：`oka run --apply` 写入 Class A，写入租约、冲突产物与回滚日志
+- **回滚**：支持全量回滚与 `--item`/`--file` 的局部回滚（仅 Class A）
+- **存储治理**：run 日志自动裁剪与可选压缩，避免报告目录膨胀
+- **Git 保险**：可要求 clean repo、自动 checkpoint/commit（run-log 记录提交）
+- **跨文件事务（B1）**：rename + 更新链接，失败则整体中断并提示 Git revert
 
 ### 结构化输出（JSON 示例）
 
@@ -74,9 +81,11 @@ Obsidian Assistant 是一个以安全只读为默认的命令行工具，专注�
 {
   "version": "1",
   "run_id": "20260116_144427_c872c4",
+  "fast_path": true,
   "timing": { "total_ms": 4, "stages": { "scan_ms": 0, "parse_ms": 1 } },
   "io": { "scanned_files": 12, "skipped": { "non_md": 0, "too_large": 0, "no_permission": 0 } },
   "cache": { "present": false, "hit_rate": 0.0, "incremental_updated": 0 },
+  "apply": { "waited_sec": 0, "starvation": false, "fallback": "none", "offline_lock": false },
   "downgrades": []
 }
 ```
@@ -111,6 +120,36 @@ python -m pip install -e .
 oka run --vault <path-to-vault>
 ```
 
+### pipx（可选）
+
+```bash
+pipx install .
+oka run --vault <path-to-vault>
+```
+
+### 二进制（无需 Python）
+
+构建（PyInstaller）：
+
+```bash
+python -m pip install -r requirements-build.txt
+python scripts/build_binary.py
+```
+
+运行：
+
+```bash
+dist/oka-<platform>/oka run --vault <path-to-vault>
+```
+
+`<platform>` 取值：`windows`/`macos`/`linux`。
+
+可选 smoke test：
+
+```bash
+python scripts/smoke_binary.py --clean
+```
+
 ### Doctor
 
 ```bash
@@ -124,6 +163,41 @@ python -m oka doctor --init-config --vault <path-to-vault>
 python -m oka run --vault <path-to-vault> --json
 ```
 
+### 语言选择
+
+```bash
+python -m oka run --vault <path-to-vault> --lang zh
+python -m oka doctor --vault <path-to-vault> --lang en
+```
+
+也可在配置中指定默认语言：
+
+```toml
+[i18n]
+language = "zh"
+```
+
+### Apply 与回滚
+
+```bash
+python -m oka run --vault <path-to-vault> --apply
+python -m oka run --vault <path-to-vault> --apply --yes
+python -m oka rollback <run_id>
+python -m oka rollback <run_id> --item <action_id>
+python -m oka rollback <run_id> --file <path>
+```
+
+说明：
+
+- Class B1（rename + update links）不提供文件系统级回滚，建议使用 Git revert。
+
+### Watch
+
+```bash
+python -m oka watch --vault <path-to-vault>
+python -m oka watch --vault <path-to-vault> --once
+```
+
 ## 输出与目录契约
 
 ```
@@ -132,12 +206,25 @@ reports/
   action-items.json
   run-summary.json
   report.md
+  runs/
+    <run_id>/
+      run-log.json
+      patches/
+      backups/
+      conflicts/
+        HOWTO.txt
 cache/
   index.sqlite
 locks/
   write-lease.json
   offline-lock.json
 ```
+
+可选 marker（写入 vault 根目录）：
+
+- `.nosync`（或自定义 marker，见 `apply.offline_lock_marker`）
+
+说明：报告与日志文件统一使用 UTF-8 编码与 LF 换行。
 
 ## 配置
 
@@ -153,9 +240,33 @@ locks/
 [profile]
 name = "conservative"
 
+[i18n]
+language = "en" # or "zh"
+
 [scan]
 max_file_mb = 5
+max_files_per_sec = 0
+sleep_ms = 0
 exclude_dirs = [".obsidian"]
+
+[apply]
+max_wait_sec = 30
+offline_lock_marker = ".nosync"
+offline_lock_cleanup = true
+
+[apply.git]
+policy = "require_clean"
+auto_commit = false
+
+[performance]
+fast_path_max_age_sec = 10
+
+[storage]
+max_run_logs = 50
+max_run_days = 30
+max_total_mb = 200
+compress_runs = false
+auto_prune = true
 
 [scoring]
 model = "quantile"
