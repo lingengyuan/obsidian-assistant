@@ -1026,12 +1026,14 @@ def build_run_summary(
 
 def write_json(path: Path, payload: Dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        json.dump(payload, handle, indent=2, ensure_ascii=False)
 
 
 def write_report(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(content)
 
 
 def run_pipeline(

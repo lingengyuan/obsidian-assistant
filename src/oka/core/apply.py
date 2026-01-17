@@ -169,7 +169,8 @@ def acquire_write_lease(locks_dir: Path, ttl_sec: int, force: bool) -> Tuple[boo
         "ttl_sec": ttl_sec,
         "expires_at": expires_at,
     }
-    lease_path.write_text(json.dumps(lease_data, indent=2), encoding="utf-8")
+    with lease_path.open("w", encoding="utf-8", newline="\n") as handle:
+        json.dump(lease_data, handle, indent=2, ensure_ascii=False)
     return True, "ok"
 
 
@@ -322,19 +323,22 @@ def _write_diff(path: Path, before: str, after: str, rel_path: str) -> None:
         fromfile=rel_path,
         tofile=rel_path,
     )
-    path.write_text("".join(diff_lines), encoding="utf-8")
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write("".join(diff_lines))
 
 
 def _write_conflict_note(path: Path, message: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(message, encoding="utf-8")
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(message)
 
 
 def _ensure_howto(conflicts_dir: Path, lang: str) -> None:
     howto_path = conflicts_dir / "HOWTO.txt"
     if howto_path.exists():
         return
-    howto_path.write_text(t(lang, "howto_conflicts"), encoding="utf-8")
+    with howto_path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(t(lang, "howto_conflicts"))
 
 
 def _relative_target(vault_path: Path, target_path: str) -> Path:
@@ -941,7 +945,8 @@ def write_run_log(
         "changes": changes,
         "conflicts": conflicts,
     }
-    log_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    with log_path.open("w", encoding="utf-8", newline="\n") as handle:
+        json.dump(payload, handle, indent=2, ensure_ascii=False)
     return log_path
 
 

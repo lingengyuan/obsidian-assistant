@@ -120,6 +120,36 @@ python -m pip install -e .
 oka run --vault <path-to-vault>
 ```
 
+### pipx（可选）
+
+```bash
+pipx install .
+oka run --vault <path-to-vault>
+```
+
+### 二进制（无需 Python）
+
+构建（PyInstaller）：
+
+```bash
+python -m pip install -r requirements-build.txt
+python scripts/build_binary.py
+```
+
+运行：
+
+```bash
+dist/oka-<platform>/oka run --vault <path-to-vault>
+```
+
+`<platform>` 取值：`windows`/`macos`/`linux`。
+
+可选 smoke test：
+
+```bash
+python scripts/smoke_binary.py --clean
+```
+
 ### Doctor
 
 ```bash
@@ -193,6 +223,8 @@ locks/
 可选 marker（写入 vault 根目录）：
 
 - `.nosync`（或自定义 marker，见 `apply.offline_lock_marker`）
+
+说明：报告与日志文件统一使用 UTF-8 编码与 LF 换行。
 
 ## 配置
 
