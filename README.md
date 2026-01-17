@@ -37,6 +37,8 @@ Obsidian Assistant 是一个以安全只读为默认的命令行工具，专注�
 - **安全写入**：`oka run --apply` 写入 Class A，写入租约、冲突产物与回滚日志
 - **回滚**：支持全量回滚与 `--item`/`--file` 的局部回滚（仅 Class A）
 - **存储治理**：run 日志自动裁剪与可选压缩，避免报告目录膨胀
+- **Git 保险**：可要求 clean repo、自动 checkpoint/commit（run-log 记录提交）
+- **跨文件事务（B1）**：rename + 更新链接，失败则整体中断并提示 Git revert
 
 ### 结构化输出（JSON 示例）
 
@@ -131,6 +133,20 @@ python -m oka doctor --init-config --vault <path-to-vault>
 python -m oka run --vault <path-to-vault> --json
 ```
 
+### 语言选择
+
+```bash
+python -m oka run --vault <path-to-vault> --lang zh
+python -m oka doctor --vault <path-to-vault> --lang en
+```
+
+也可在配置中指定默认语言：
+
+```toml
+[i18n]
+language = "zh"
+```
+
 ### Apply 与回滚
 
 ```bash
@@ -140,6 +156,10 @@ python -m oka rollback <run_id>
 python -m oka rollback <run_id> --item <action_id>
 python -m oka rollback <run_id> --file <path>
 ```
+
+说明：
+
+- Class B1（rename + update links）不提供文件系统级回滚，建议使用 Git revert。
 
 ### Watch
 
@@ -188,6 +208,9 @@ locks/
 [profile]
 name = "conservative"
 
+[i18n]
+language = "en" # or "zh"
+
 [scan]
 max_file_mb = 5
 max_files_per_sec = 0
@@ -198,6 +221,10 @@ exclude_dirs = [".obsidian"]
 max_wait_sec = 30
 offline_lock_marker = ".nosync"
 offline_lock_cleanup = true
+
+[apply.git]
+policy = "require_clean"
+auto_commit = false
 
 [performance]
 fast_path_max_age_sec = 10

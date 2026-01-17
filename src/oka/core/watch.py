@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from typing import Dict
 
+from oka.core.i18n import t
 from oka.core.index import IndexStore
 from oka.core.pipeline import _load_notes_with_cache, scan_vault
 
@@ -60,6 +61,7 @@ def watch_loop(
     interval_sec: int,
     once: bool,
     low_priority: bool = True,
+    lang: str = "en",
 ) -> None:
     if low_priority:
         _try_low_priority()
@@ -73,11 +75,7 @@ def watch_loop(
             sleep_ms=sleep_ms,
             top_terms_limit=top_terms_limit,
         )
-        print(
-            "watch: scanned={scanned} updated={updated} unchanged={unchanged} removed={removed}".format(
-                **stats
-            )
-        )
+        print(t(lang, "watch_summary", **stats))
         if once:
             break
         time.sleep(interval_sec)

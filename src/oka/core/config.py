@@ -16,8 +16,17 @@ def load_config(vault_path: Path, base_dir: Path) -> Dict[str, Any]:
     return {}
 
 
+def _get_section(config: Dict[str, Any], section: str) -> Dict[str, Any]:
+    node: Any = config
+    for part in section.split("."):
+        if not isinstance(node, dict):
+            return {}
+        node = node.get(part, {})
+    return node if isinstance(node, dict) else {}
+
+
 def get_int(config: Dict[str, Any], section: str, key: str, default: int) -> int:
-    value = config.get(section, {}).get(key, default)
+    value = _get_section(config, section).get(key, default)
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -25,7 +34,7 @@ def get_int(config: Dict[str, Any], section: str, key: str, default: int) -> int
 
 
 def get_float(config: Dict[str, Any], section: str, key: str, default: float) -> float:
-    value = config.get(section, {}).get(key, default)
+    value = _get_section(config, section).get(key, default)
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -33,12 +42,12 @@ def get_float(config: Dict[str, Any], section: str, key: str, default: float) ->
 
 
 def get_str(config: Dict[str, Any], section: str, key: str, default: str) -> str:
-    value = config.get(section, {}).get(key, default)
+    value = _get_section(config, section).get(key, default)
     return str(value) if value is not None else default
 
 
 def get_bool(config: Dict[str, Any], section: str, key: str, default: bool) -> bool:
-    value = config.get(section, {}).get(key, default)
+    value = _get_section(config, section).get(key, default)
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
