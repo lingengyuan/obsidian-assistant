@@ -155,11 +155,17 @@ def _default_config_text() -> str:
             "",
             "[apply]",
             "interactive = true",
-            "max_wait_sec = 30",
-            "",
-            "[scan]",
-            "max_file_mb = 5",
-            'exclude_dirs = [".obsidian"]',
+        "max_wait_sec = 30",
+        "",
+        "[performance]",
+        "max_mem_mb = 0",
+        "timeout_sec = 0",
+        "max_workers = 0",
+        "top_terms = 30",
+        "",
+        "[scan]",
+        "max_file_mb = 5",
+        'exclude_dirs = [".obsidian"]',
             "",
             "[format]",
             "normalize_on_write = false",
@@ -247,6 +253,8 @@ def _print_summary(summary: dict, file) -> None:
     io = summary.get("io", {})
     skipped = io.get("skipped", {})
     cache = summary.get("cache", {})
+    incremental = summary.get("incremental", {})
+    skipped_by_reason = incremental.get("skipped_by_reason", {})
 
     print("", file=file)
     print("Performance Summary", file=file)
@@ -282,6 +290,11 @@ def _print_summary(summary: dict, file) -> None:
         ),
         file=file,
     )
+    if skipped_by_reason:
+        print(
+            "Skipped by reason: {reasons}".format(reasons=skipped_by_reason),
+            file=file,
+        )
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -10,6 +11,8 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 from uuid import uuid4
 
+from oka.core.config import get_float, get_int, get_str, load_config
+from oka.core.index import CacheRecord, IndexStore, decode_json, encode_json
 from oka.core.scoring import (
     ScoringConfig,
     build_reason,
@@ -19,6 +22,7 @@ from oka.core.scoring import (
 
 LINK_PATTERN = re.compile(r"\[\[([^\[\]]+)\]\]")
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9]{3,}")
+DEFAULT_TOP_TERMS = 30
 
 
 @dataclass
@@ -65,6 +69,15 @@ class RecommendationResult:
     metadata_suggestions: List[Dict[str, object]]
     merge_previews: List[Dict[str, object]]
     low_confidence_count: int
+    downgrades: List[str]
+
+
+@dataclass
+class IncrementalStats:
+    total: int
+    unchanged: int
+    updated: int
+    removed: int
 
 
 @dataclass
@@ -82,6 +95,10 @@ def _now_iso() -> str:
 def _run_id() -> str:
     stamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     return f"{stamp}_{uuid4().hex[:6]}"
+
+
+def _sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
 
 
 def scan_vault(vault_path: Path, max_file_mb: int = 5) -> ScanResult:
@@ -169,6 +186,14 @@ def _tokenize(text: str) -> List[str]:
     return [match.group(0).lower() for match in TOKEN_PATTERN.finditer(text)]
 
 
+def _top_terms(tokens: List[str], limit: int) -> List[str]:
+    counts: Dict[str, int] = {}
+    for token in tokens:
+        counts[token] = counts.get(token, 0) + 1
+    ordered = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    return [token for token, _ in ordered[:limit]]
+
+
 def _title_tokens(title: str) -> Set[str]:
     tokens = [token.lower() for token in re.split(r"[\s\-_]+", title) if token]
     return set(tokens)
@@ -189,6 +214,129 @@ def _extract_links(content: str) -> List[str]:
     return links
 
 
+def _decode_cached_list(value: Optional[str]) -> List[str]:
+    decoded = decode_json(value, [])
+    return decoded if isinstance(decoded, list) else []
+
+
+def _decode_cached_dict(value: Optional[str]) -> Dict[str, List[str]]:
+    decoded = decode_json(value, {})
+    return decoded if isinstance(decoded, dict) else {}
+
+
+def _parse_note_file(
+    path: Path,
+    vault_path: Path,
+    top_terms_limit: int,
+) -> Tuple[ParsedNote, CacheRecord]:
+    data = path.read_bytes()
+    sha256 = _sha256_bytes(data)
+    content = data.decode("utf-8", errors="replace")
+
+    has_frontmatter, frontmatter_block, body = _split_frontmatter(content)
+    frontmatter = _parse_frontmatter(frontmatter_block) if has_frontmatter else {}
+    links = _extract_links(body)
+    tokens = _tokenize(body)
+    top_terms = _top_terms(tokens, top_terms_limit)
+
+    rel_path = str(path)
+    try:
+        rel_path = path.relative_to(vault_path).as_posix()
+    except ValueError:
+        rel_path = str(path)
+
+    note = ParsedNote(
+        path=path,
+        title=path.stem,
+        has_frontmatter=has_frontmatter,
+        frontmatter=frontmatter,
+        links=links,
+        content_tokens=top_terms,
+        title_tokens=_title_tokens(path.stem),
+        link_set=set(links),
+        rel_path=rel_path,
+    )
+
+    stat = path.stat()
+    record = CacheRecord(
+        path=rel_path,
+        mtime=stat.st_mtime,
+        size=stat.st_size,
+        sha256=sha256,
+        frontmatter=encode_json(frontmatter),
+        frontmatter_keys=encode_json(list(frontmatter.keys())),
+        links=encode_json(links),
+        top_terms=encode_json(top_terms),
+    )
+    return note, record
+
+
+def _note_from_cache(
+    path: Path,
+    rel_path: str,
+    record: Dict[str, object],
+) -> ParsedNote:
+    links = _decode_cached_list(record.get("links"))
+    frontmatter = _decode_cached_dict(record.get("frontmatter"))
+    frontmatter_keys = _decode_cached_list(record.get("frontmatter_keys"))
+    top_terms = _decode_cached_list(record.get("top_terms"))
+    return ParsedNote(
+        path=path,
+        title=path.stem,
+        has_frontmatter=bool(frontmatter_keys),
+        frontmatter=frontmatter,
+        links=links,
+        content_tokens=top_terms,
+        title_tokens=_title_tokens(path.stem),
+        link_set=set(links),
+        rel_path=rel_path,
+    )
+
+
+def _load_notes_with_cache(
+    md_files: Iterable[Path],
+    vault_path: Path,
+    index: IndexStore,
+    top_terms_limit: int,
+) -> Tuple[ParseResult, IncrementalStats]:
+    notes: List[ParsedNote] = []
+    unchanged = 0
+    updated = 0
+    paths: List[str] = []
+
+    for path in md_files:
+        rel_path = str(path)
+        try:
+            rel_path = path.relative_to(vault_path).as_posix()
+        except ValueError:
+            rel_path = str(path)
+        paths.append(rel_path)
+
+        stat = path.stat()
+        cached = index.get(rel_path)
+        if cached and cached.get("mtime") == stat.st_mtime and cached.get("size") == stat.st_size:
+            notes.append(_note_from_cache(path, rel_path, cached))
+            unchanged += 1
+            continue
+
+        note, record = _parse_note_file(path, vault_path, top_terms_limit)
+        index.upsert(record)
+        notes.append(note)
+        updated += 1
+
+    removed = index.remove_missing(paths)
+    index.commit()
+
+    total_files = len(md_files) if isinstance(md_files, list) else len(notes)
+    stats = IncrementalStats(
+        total=total_files,
+        unchanged=unchanged,
+        updated=updated,
+        removed=removed,
+    )
+    return ParseResult(notes=notes), stats
+
+
 def parse_notes(md_files: Iterable[Path], vault_path: Path) -> ParseResult:
     notes: List[ParsedNote] = []
     for path in md_files:
@@ -202,6 +350,7 @@ def parse_notes(md_files: Iterable[Path], vault_path: Path) -> ParseResult:
         frontmatter = _parse_frontmatter(frontmatter_block) if has_frontmatter else {}
         links = _extract_links(body)
         content_tokens = _tokenize(body)
+        top_terms = _top_terms(content_tokens, DEFAULT_TOP_TERMS)
         rel_path = str(path)
         try:
             rel_path = path.relative_to(vault_path).as_posix()
@@ -214,7 +363,7 @@ def parse_notes(md_files: Iterable[Path], vault_path: Path) -> ParseResult:
                 has_frontmatter=has_frontmatter,
                 frontmatter=frontmatter,
                 links=links,
-                content_tokens=content_tokens,
+                content_tokens=top_terms,
                 title_tokens=_title_tokens(path.stem),
                 link_set=set(links),
                 rel_path=rel_path,
@@ -312,23 +461,21 @@ def _build_related_block(
     }
 
 
-def recommend_notes(
-    parse_result: ParseResult,
-    vault_path: Path,
-    config: ScoringConfig,
-) -> RecommendationResult:
-    notes = parse_result.notes
-    pair_stats: List[Dict[str, object]] = []
-    raw_content_values: List[float] = []
-
-    for i in range(len(notes)):
+def _pair_stats_range(
+    notes: List[ParsedNote],
+    start: int,
+    end: int,
+) -> Tuple[List[Dict[str, object]], List[float]]:
+    stats: List[Dict[str, object]] = []
+    raw_values: List[float] = []
+    for i in range(start, end):
+        left = notes[i]
         for j in range(i + 1, len(notes)):
-            left = notes[i]
             right = notes[j]
             content_sim = _jaccard(set(left.content_tokens), set(right.content_tokens))
             title_sim = _jaccard(left.title_tokens, right.title_tokens)
             link_overlap = _jaccard(left.link_set, right.link_set)
-            pair_stats.append(
+            stats.append(
                 {
                     "left": i,
                     "right": j,
@@ -337,7 +484,70 @@ def recommend_notes(
                     "link_overlap": link_overlap,
                 }
             )
-            raw_content_values.append(content_sim)
+            raw_values.append(content_sim)
+    return stats, raw_values
+
+
+def recommend_notes(
+    parse_result: ParseResult,
+    vault_path: Path,
+    config: ScoringConfig,
+    max_workers: int,
+    timeout_sec: int,
+    max_mem_mb: int,
+) -> RecommendationResult:
+    notes = parse_result.notes
+    downgrades: List[str] = []
+
+    if max_mem_mb > 0:
+        estimated_tokens = sum(len(note.content_tokens) for note in notes)
+        estimated_mem_mb = (estimated_tokens * 16) / (1024 * 1024)
+        if estimated_mem_mb > max_mem_mb:
+            downgrades.append("recommend_skipped_mem_limit")
+            return RecommendationResult([], [], [], 0, downgrades)
+
+    pair_stats: List[Dict[str, object]] = []
+    raw_content_values: List[float] = []
+    start_time = time.monotonic()
+
+    if max_workers > 1 and timeout_sec <= 0 and len(notes) > 2:
+        from concurrent.futures import ThreadPoolExecutor
+
+        chunk_size = max(1, len(notes) // max_workers)
+        ranges = [
+            (idx, min(idx + chunk_size, len(notes)))
+            for idx in range(0, len(notes), chunk_size)
+        ]
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            for stats, raw in executor.map(
+                lambda r: _pair_stats_range(notes, r[0], r[1]), ranges
+            ):
+                pair_stats.extend(stats)
+                raw_content_values.extend(raw)
+    else:
+        timed_out = False
+        for i in range(len(notes)):
+            if timeout_sec > 0 and time.monotonic() - start_time >= timeout_sec:
+                timed_out = True
+                break
+            left = notes[i]
+            for j in range(i + 1, len(notes)):
+                right = notes[j]
+                content_sim = _jaccard(set(left.content_tokens), set(right.content_tokens))
+                title_sim = _jaccard(left.title_tokens, right.title_tokens)
+                link_overlap = _jaccard(left.link_set, right.link_set)
+                pair_stats.append(
+                    {
+                        "left": i,
+                        "right": j,
+                        "content_sim_raw": content_sim,
+                        "title_sim": title_sim,
+                        "link_overlap": link_overlap,
+                    }
+                )
+                raw_content_values.append(content_sim)
+        if timed_out:
+            downgrades.append("recommend_timeout")
 
     if config.norm_method == "quantile":
         normalized_content = quantile_normalize(raw_content_values)
@@ -449,6 +659,7 @@ def recommend_notes(
         metadata_suggestions=metadata_suggestions,
         merge_previews=merge_previews,
         low_confidence_count=low_confidence_count,
+        downgrades=downgrades,
     )
 
 
@@ -689,6 +900,9 @@ def build_run_summary(
     timing_ms: Dict[str, int],
     scan_result: ScanResult,
     cache_present: bool,
+    incremental: IncrementalStats,
+    skipped_by_reason: Dict[str, int],
+    downgrades: List[str],
 ) -> Dict[str, object]:
     total_ms = timing_ms.get("total_ms", 0)
     stages = {
@@ -699,6 +913,7 @@ def build_run_summary(
         "plan_ms": timing_ms.get("plan_ms", 0),
         "report_ms": timing_ms.get("report_ms", 0),
     }
+    hit_rate = incremental.unchanged / incremental.total if incremental.total else 0.0
     return {
         "version": "1",
         "run_id": run_id,
@@ -706,13 +921,20 @@ def build_run_summary(
         "io": {
             "scanned_files": len(scan_result.md_files),
             "skipped": scan_result.skipped,
+            "skipped_by_reason": skipped_by_reason,
         },
         "cache": {
             "present": cache_present,
-            "hit_rate": 0.0,
-            "incremental_updated": 0,
+            "hit_rate": round(hit_rate, 3),
+            "incremental_updated": incremental.updated,
         },
-        "downgrades": [],
+        "incremental": {
+            "hit_rate": round(hit_rate, 3),
+            "incremental_updated": incremental.updated,
+            "removed": incremental.removed,
+            "skipped_by_reason": skipped_by_reason,
+        },
+        "downgrades": downgrades,
     }
 
 
@@ -735,22 +957,60 @@ def run_pipeline(
     run_id = _run_id()
     timings: Dict[str, int] = {}
 
+    config_data = load_config(vault_path, base_dir)
+    max_file_mb = get_int(config_data, "scan", "max_file_mb", max_file_mb)
+    max_mem_mb = get_int(config_data, "performance", "max_mem_mb", 0)
+    timeout_sec = get_int(config_data, "performance", "timeout_sec", 0)
+    max_workers = get_int(config_data, "performance", "max_workers", 0)
+    top_terms_limit = get_int(
+        config_data, "performance", "top_terms", DEFAULT_TOP_TERMS
+    )
+    scoring_config = ScoringConfig(
+        w_content=get_float(config_data, "scoring", "w_content", 0.6),
+        w_title=get_float(config_data, "scoring", "w_title", 0.3),
+        w_link=get_float(config_data, "scoring", "w_link", 0.1),
+        clamp_min=get_float(config_data, "scoring", "clamp_min", 0.0),
+        clamp_max=get_float(config_data, "scoring", "clamp_max", 1.0),
+        path_penalty=get_float(config_data, "filters", "path_penalty", 0.9),
+        min_related_confidence=get_float(
+            config_data, "scoring", "min_related_confidence", 0.3
+        ),
+        merge_confidence=get_float(
+            config_data, "scoring", "merge_confidence", 0.85
+        ),
+        low_confidence=get_float(config_data, "scoring", "low_confidence", 0.45),
+        norm_method=get_str(config_data, "scoring", "model", "quantile"),
+    )
+
+    cache_path = base_dir / "cache" / "index.sqlite"
+    cache_present = cache_path.exists()
+
     start = time.perf_counter()
     scan_start = time.perf_counter()
     scan_result = scan_vault(vault_path, max_file_mb=max_file_mb)
     timings["scan_ms"] = int((time.perf_counter() - scan_start) * 1000)
 
     parse_start = time.perf_counter()
-    parse_result = parse_notes(scan_result.md_files, vault_path)
+    index = IndexStore(cache_path)
+    parse_result, incremental_stats = _load_notes_with_cache(
+        scan_result.md_files, vault_path, index, top_terms_limit
+    )
+    index.close()
     timings["parse_ms"] = int((time.perf_counter() - parse_start) * 1000)
 
     analyze_start = time.perf_counter()
     analysis = analyze_notes(parse_result)
     timings["analyze_ms"] = int((time.perf_counter() - analyze_start) * 1000)
 
-    scoring_config = ScoringConfig()
     recommend_start = time.perf_counter()
-    recommendations = recommend_notes(parse_result, vault_path, scoring_config)
+    recommendations = recommend_notes(
+        parse_result,
+        vault_path,
+        scoring_config,
+        max_workers=max_workers,
+        timeout_sec=timeout_sec,
+        max_mem_mb=max_mem_mb,
+    )
     timings["recommend_ms"] = int((time.perf_counter() - recommend_start) * 1000)
 
     plan_start = time.perf_counter()
@@ -771,8 +1031,17 @@ def run_pipeline(
 
     health = build_health(analysis, vault_path)
     action_items = build_action_items(plan, vault_path, profile)
-    cache_present = (base_dir / "cache" / "index.sqlite").exists()
-    run_summary = build_run_summary(run_id, timings, scan_result, cache_present)
+    skipped_by_reason = dict(scan_result.skipped)
+    skipped_by_reason["unchanged"] = incremental_stats.unchanged
+    run_summary = build_run_summary(
+        run_id,
+        timings,
+        scan_result,
+        cache_present,
+        incremental_stats,
+        skipped_by_reason,
+        recommendations.downgrades,
+    )
 
     return PipelineOutput(
         health=health,
