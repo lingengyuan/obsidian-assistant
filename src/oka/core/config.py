@@ -35,3 +35,14 @@ def get_float(config: Dict[str, Any], section: str, key: str, default: float) ->
 def get_str(config: Dict[str, Any], section: str, key: str, default: str) -> str:
     value = config.get(section, {}).get(key, default)
     return str(value) if value is not None else default
+
+
+def get_bool(config: Dict[str, Any], section: str, key: str, default: bool) -> bool:
+    value = config.get(section, {}).get(key, default)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return default

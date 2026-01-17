@@ -10,8 +10,10 @@ from typing import List, Optional
 
 from oka import __version__
 from oka.core.apply import apply_action_items, rollback_run, write_run_log
+from oka.core.config import load_config
 from oka.core.doctor import run_doctor
 from oka.core.pipeline import run_pipeline, write_json, write_report
+from oka.core.storage import prune_run_logs
 
 
 def _resolve_vault_path(cli_value: Optional[Path]) -> Optional[Path]:
@@ -94,6 +96,8 @@ def _run_command(args: argparse.Namespace) -> int:
             conflicts=result.conflicts,
             apply_info=apply_info,
         )
+        config_data = load_config(vault_path, base_dir)
+        prune_run_logs(base_dir, config_data)
         return result.return_code
 
     return 0
@@ -149,9 +153,11 @@ def _default_config_text() -> str:
             'reports_dir = "reports"',
             'cache_dir = "cache"',
             'locks_dir = "locks"',
-            "retention_runs = 50",
-            "retention_days = 30",
+            "max_run_logs = 50",
+            "max_run_days = 30",
             "max_total_mb = 200",
+            "compress_runs = false",
+            "auto_prune = true",
             "",
             "[apply]",
             "interactive = true",
@@ -376,6 +382,16 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         help="Run identifier from run-summary.json or reports/runs/<run_id>.",
     )
+    rollback_parser.add_argument(
+        "--item",
+        type=str,
+        help="Rollback a specific action_id (Class A only).",
+    )
+    rollback_parser.add_argument(
+        "--file",
+        type=str,
+        help="Rollback Class A changes for a specific file path.",
+    )
     rollback_parser.set_defaults(func=_rollback_command)
 
     return parser
@@ -383,7 +399,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _rollback_command(args: argparse.Namespace) -> int:
     base_dir = Path.cwd()
-    result = rollback_run(args.run_id, base_dir)
+    result = rollback_run(args.run_id, base_dir, item_id=args.item, target_path=args.file)
     return result.return_code
 
 

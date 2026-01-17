@@ -6,7 +6,7 @@ import os
 import socket
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -84,11 +84,12 @@ def wait_for_quiet(vault_path: Path, max_wait_sec: int, window_sec: int = 2) -> 
 
 
 def _lock_stale(data: Dict[str, object]) -> bool:
+    now = datetime.now(timezone.utc)
     expires_at = data.get("expires_at")
     if expires_at:
         try:
             expires = datetime.fromisoformat(str(expires_at).replace("Z", "+00:00"))
-            return expires < datetime.utcnow()
+            return expires < now
         except ValueError:
             return False
     created_at = data.get("created_at")
@@ -97,7 +98,7 @@ def _lock_stale(data: Dict[str, object]) -> bool:
         try:
             created = datetime.fromisoformat(str(created_at).replace("Z", "+00:00"))
             ttl = int(ttl_sec)
-            return created + timedelta(seconds=ttl) < datetime.utcnow()
+            return created + timedelta(seconds=ttl) < now
         except ValueError:
             return False
     return False
@@ -460,6 +461,7 @@ def apply_action_items(
             changes.append(
                 {
                     "action_id": item.get("id"),
+                    "action_type": item.get("type"),
                     "risk_class": item.get("risk_class"),
                     "target_path": target_path,
                     "base_hash": base_hash,
@@ -469,6 +471,7 @@ def apply_action_items(
                     "backup_path": str(backup_path),
                     "anchors": anchors,
                     "frontmatter_keys": frontmatter_keys,
+                    "dependencies": item.get("dependencies", []),
                 }
             )
 
@@ -506,21 +509,91 @@ def write_run_log(
     return log_path
 
 
-def rollback_run(run_id: str, base_dir: Path) -> ApplyResult:
+def _load_run_log(run_id: str, base_dir: Path) -> Tuple[Optional[Dict[str, object]], Path]:
     run_dir = base_dir / "reports" / "runs" / run_id
     log_path = run_dir / "run-log.json"
     if not log_path.exists():
         print(f"Run log not found: {log_path}")
-        return ApplyResult(return_code=20, conflicts=[], changes=[])
-
+        return None, run_dir
     data = json.loads(log_path.read_text(encoding="utf-8"))
-    changes = data.get("changes", [])
-    conflicts: List[Dict[str, object]] = []
+    return data, run_dir
 
+
+def _dependency_notice(changes: List[Dict[str, object]]) -> None:
+    selected_ids = {change.get("action_id") for change in changes}
+    missing: List[str] = []
+    for change in changes:
+        for dep in change.get("dependencies", []) or []:
+            if dep not in selected_ids:
+                missing.append(dep)
+    if missing:
+        unique = ", ".join(sorted(set(missing)))
+        print(f"Note: dependencies not selected for rollback: {unique}")
+
+
+def _rollback_change_partial(
+    change: Dict[str, object],
+    vault_path: Path,
+    run_dir: Path,
+    conflicts: List[Dict[str, object]],
+) -> None:
+    target_path = change.get("target_path") or ""
+    file_path = Path(vault_path) / target_path
+    if not target_path or not file_path.exists():
+        note_path = run_dir / "conflicts" / f"{target_path}.note"
+        diff_path = run_dir / "conflicts" / f"{target_path}.diff"
+        _write_conflict_note(note_path, "Missing file; rollback skipped.")
+        _write_conflict_note(diff_path, "")
+        conflicts.append(
+            {"target_path": target_path, "diff_path": str(diff_path), "note_path": str(note_path)}
+        )
+        return
+
+    current_content = _read_text(file_path)
+    updated_content = current_content
+    missing: List[str] = []
+
+    anchors = change.get("anchors", []) or []
+    for anchor in anchors:
+        updated_content, removed = remove_anchor_block(updated_content, anchor)
+        if not removed:
+            missing.append(f"anchor:{anchor}")
+
+    frontmatter_keys = change.get("frontmatter_keys", []) or []
+    if frontmatter_keys:
+        updated_content, removed_keys = remove_frontmatter_keys(updated_content, frontmatter_keys)
+        removed_set = set(removed_keys)
+        for key in frontmatter_keys:
+            if key not in removed_set:
+                missing.append(f"frontmatter:{key}")
+
+    if missing or updated_content == current_content:
+        note_path = run_dir / "conflicts" / f"{target_path}.note"
+        diff_path = run_dir / "conflicts" / f"{target_path}.diff"
+        if updated_content != current_content:
+            _write_diff(diff_path, current_content, updated_content, target_path)
+        else:
+            _write_conflict_note(diff_path, "")
+        detail = "Missing targets for rollback: " + ", ".join(missing) if missing else "No changes applied."
+        _write_conflict_note(note_path, detail)
+        conflicts.append(
+            {"target_path": target_path, "diff_path": str(diff_path), "note_path": str(note_path)}
+        )
+        return
+
+    _atomic_write(file_path, updated_content)
+
+
+def _rollback_full(
+    changes: List[Dict[str, object]],
+    run_dir: Path,
+    vault_path: Path,
+) -> ApplyResult:
+    conflicts: List[Dict[str, object]] = []
     for change in changes:
         target_path = change.get("target_path")
         backup_path = Path(change.get("backup_path", ""))
-        file_path = Path(data.get("vault", ".")) / target_path
+        file_path = vault_path / (target_path or "")
 
         if not file_path.exists() or not backup_path.exists():
             note_path = run_dir / "conflicts" / f"{target_path}.note"
@@ -553,5 +626,50 @@ def rollback_run(run_id: str, base_dir: Path) -> ApplyResult:
 
     if conflicts:
         _ensure_howto(run_dir / "conflicts")
-
     return ApplyResult(return_code=2 if conflicts else 0, conflicts=conflicts, changes=changes)
+
+
+def rollback_run(
+    run_id: str,
+    base_dir: Path,
+    item_id: Optional[str] = None,
+    target_path: Optional[str] = None,
+) -> ApplyResult:
+    if item_id and target_path:
+        print("Error: use either --item or --file, not both.")
+        return ApplyResult(return_code=20, conflicts=[], changes=[])
+
+    data, run_dir = _load_run_log(run_id, base_dir)
+    if data is None:
+        return ApplyResult(return_code=20, conflicts=[], changes=[])
+
+    changes = data.get("changes", [])
+    vault_path = Path(data.get("vault", "."))
+
+    if item_id or target_path:
+        if item_id:
+            selected = [change for change in changes if change.get("action_id") == item_id]
+            if not selected:
+                print(f"No matching action for id: {item_id}")
+                return ApplyResult(return_code=20, conflicts=[], changes=[])
+        else:
+            selected = [change for change in changes if change.get("target_path") == target_path]
+            if not selected:
+                print(f"No matching changes for file: {target_path}")
+                return ApplyResult(return_code=20, conflicts=[], changes=[])
+
+        for change in selected:
+            if change.get("risk_class") != "A":
+                print("Partial rollback only supports Class A actions. Use Git revert for others.")
+                return ApplyResult(return_code=20, conflicts=[], changes=[])
+
+        _dependency_notice(selected)
+        conflicts: List[Dict[str, object]] = []
+        for change in selected:
+            _rollback_change_partial(change, vault_path, run_dir, conflicts)
+
+        if conflicts:
+            _ensure_howto(run_dir / "conflicts")
+        return ApplyResult(return_code=2 if conflicts else 0, conflicts=conflicts, changes=selected)
+
+    return _rollback_full(changes, run_dir, vault_path)
