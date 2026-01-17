@@ -1,36 +1,16 @@
 from __future__ import annotations
 
 import json
-import os
-import subprocess
-import sys
 from pathlib import Path
-from typing import List
 
-
-def _run_oka(args: List[str], cwd: Path) -> subprocess.CompletedProcess[str]:
-    repo_root = Path(__file__).resolve().parents[1]
-    env = os.environ.copy()
-    pythonpath = str(repo_root / "src")
-    if env.get("PYTHONPATH"):
-        pythonpath = pythonpath + os.pathsep + env["PYTHONPATH"]
-    env["PYTHONPATH"] = pythonpath
-
-    return subprocess.run(
-        [sys.executable, "-m", "oka", *args],
-        env=env,
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+from cli_helpers import run_oka
 
 
 def test_run_produces_reports(tmp_path: Path) -> None:
     repo_root = Path(__file__).resolve().parents[1]
     vault_path = repo_root / "tests" / "fixtures" / "sample_vault"
 
-    result = _run_oka(["run", "--vault", str(vault_path)], cwd=tmp_path)
+    result = run_oka(["run", "--vault", str(vault_path)], cwd=tmp_path)
     assert result.returncode == 0, result.stderr
 
     reports_dir = tmp_path / "reports"
@@ -63,9 +43,24 @@ def test_run_json_stdout(tmp_path: Path) -> None:
     repo_root = Path(__file__).resolve().parents[1]
     vault_path = repo_root / "tests" / "fixtures" / "sample_vault"
 
-    result = _run_oka(["run", "--vault", str(vault_path), "--json"], cwd=tmp_path)
+    result = run_oka(["run", "--vault", str(vault_path), "--json"], cwd=tmp_path)
     assert result.returncode == 0, result.stderr
 
     payload = json.loads(result.stdout)
     assert "action_items" in payload
     assert "run_summary" in payload
+
+
+def test_incremental_hit_rate(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    vault_path = repo_root / "tests" / "fixtures" / "sample_vault"
+
+    first = run_oka(["run", "--vault", str(vault_path)], cwd=tmp_path)
+    assert first.returncode == 0, first.stderr
+
+    second = run_oka(["run", "--vault", str(vault_path)], cwd=tmp_path)
+    assert second.returncode == 0, second.stderr
+
+    summary = json.loads((tmp_path / "reports" / "run-summary.json").read_text(encoding="utf-8"))
+    assert summary["cache"]["hit_rate"] > 0.7
+    assert summary["incremental"]["incremental_updated"] <= summary["io"]["scanned_files"]

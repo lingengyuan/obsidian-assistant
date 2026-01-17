@@ -23,3 +23,13 @@ def test_quantile_normalize_interface() -> None:
     assert len(normalized) == len(values)
     assert min(normalized) == 0.0
     assert max(normalized) == 1.0
+
+
+def test_quantile_reduces_outlier_gap() -> None:
+    raw = [0.99, 0.5, 0.49, 0.48]
+    normalized = quantile_normalize(raw)
+    raw_sorted = sorted(raw, reverse=True)
+    norm_sorted = sorted(normalized, reverse=True)
+    raw_gap = raw_sorted[0] - raw_sorted[1]
+    norm_gap = norm_sorted[0] - norm_sorted[1]
+    assert norm_gap < raw_gap
