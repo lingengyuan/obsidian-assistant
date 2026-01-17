@@ -23,6 +23,7 @@ from oka.core.scoring import (
 LINK_PATTERN = re.compile(r"\[\[([^\[\]]+)\]\]")
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9]{3,}")
 DEFAULT_TOP_TERMS = 30
+DEFAULT_FAST_PATH_AGE_SEC = 10
 
 
 @dataclass
@@ -101,29 +102,65 @@ def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def scan_vault(vault_path: Path, max_file_mb: int = 5) -> ScanResult:
+def scan_vault(
+    vault_path: Path,
+    max_file_mb: int = 5,
+    max_files_per_sec: int = 0,
+    sleep_ms: int = 0,
+) -> ScanResult:
     skipped = {"non_md": 0, "too_large": 0, "no_permission": 0}
     md_files: List[Path] = []
     max_bytes = max_file_mb * 1024 * 1024
+    scan_start = time.monotonic()
+    processed = 0
 
     for root, dirs, files in os.walk(vault_path):
         if ".obsidian" in dirs:
             dirs[:] = [d for d in dirs if d != ".obsidian"]
         root_path = Path(root)
         for name in files:
+            processed += 1
             path = root_path / name
             try:
                 size = path.stat().st_size
             except PermissionError:
                 skipped["no_permission"] += 1
+                if sleep_ms > 0:
+                    time.sleep(sleep_ms / 1000)
+                elif max_files_per_sec > 0:
+                    expected = processed / max_files_per_sec
+                    elapsed = time.monotonic() - scan_start
+                    if elapsed < expected:
+                        time.sleep(expected - elapsed)
                 continue
             if not name.lower().endswith(".md"):
                 skipped["non_md"] += 1
+                if sleep_ms > 0:
+                    time.sleep(sleep_ms / 1000)
+                elif max_files_per_sec > 0:
+                    expected = processed / max_files_per_sec
+                    elapsed = time.monotonic() - scan_start
+                    if elapsed < expected:
+                        time.sleep(expected - elapsed)
                 continue
             if size > max_bytes:
                 skipped["too_large"] += 1
+                if sleep_ms > 0:
+                    time.sleep(sleep_ms / 1000)
+                elif max_files_per_sec > 0:
+                    expected = processed / max_files_per_sec
+                    elapsed = time.monotonic() - scan_start
+                    if elapsed < expected:
+                        time.sleep(expected - elapsed)
                 continue
             md_files.append(path)
+            if sleep_ms > 0:
+                time.sleep(sleep_ms / 1000)
+            elif max_files_per_sec > 0:
+                expected = processed / max_files_per_sec
+                elapsed = time.monotonic() - scan_start
+                if elapsed < expected:
+                    time.sleep(expected - elapsed)
 
     return ScanResult(md_files=md_files, skipped=skipped)
 
@@ -335,6 +372,45 @@ def _load_notes_with_cache(
         removed=removed,
     )
     return ParseResult(notes=notes), stats
+
+
+def _load_notes_from_index(
+    index: IndexStore,
+    vault_path: Path,
+) -> Tuple[ParseResult, IncrementalStats]:
+    records = index.list_all()
+    notes: List[ParsedNote] = []
+    for record in records:
+        rel_path = str(record.get("path", ""))
+        note_path = vault_path / rel_path
+        notes.append(_note_from_cache(note_path, rel_path, record))
+    stats = IncrementalStats(
+        total=len(notes),
+        unchanged=len(notes),
+        updated=0,
+        removed=0,
+    )
+    return ParseResult(notes=notes), stats
+
+
+def _cache_is_fresh(
+    index: IndexStore,
+    max_age_sec: int,
+) -> bool:
+    if max_age_sec <= 0:
+        return False
+    last_updated = index.get_meta("last_updated")
+    pending = index.get_meta("pending")
+    try:
+        last_value = float(last_updated) if last_updated is not None else None
+    except ValueError:
+        last_value = None
+    if last_value is None:
+        return False
+    if pending not in (None, "0", 0):
+        return False
+    age = time.time() - last_value
+    return age <= max_age_sec
 
 
 def parse_notes(md_files: Iterable[Path], vault_path: Path) -> ParseResult:
@@ -903,6 +979,7 @@ def build_run_summary(
     incremental: IncrementalStats,
     skipped_by_reason: Dict[str, int],
     downgrades: List[str],
+    fast_path: bool,
 ) -> Dict[str, object]:
     total_ms = timing_ms.get("total_ms", 0)
     stages = {
@@ -917,6 +994,7 @@ def build_run_summary(
     return {
         "version": "1",
         "run_id": run_id,
+        "fast_path": fast_path,
         "timing": {"total_ms": total_ms, "stages": stages},
         "io": {
             "scanned_files": len(scan_result.md_files),
@@ -984,19 +1062,48 @@ def run_pipeline(
 
     cache_path = base_dir / "cache" / "index.sqlite"
     cache_present = cache_path.exists()
+    fast_path_max_age = get_int(
+        config_data, "performance", "fast_path_max_age_sec", DEFAULT_FAST_PATH_AGE_SEC
+    )
+    fast_path = False
+
+    if cache_present:
+        index = IndexStore(cache_path)
+        fast_path = _cache_is_fresh(index, fast_path_max_age)
+        index.close()
 
     start = time.perf_counter()
-    scan_start = time.perf_counter()
-    scan_result = scan_vault(vault_path, max_file_mb=max_file_mb)
-    timings["scan_ms"] = int((time.perf_counter() - scan_start) * 1000)
+    if fast_path:
+        scan_start = time.perf_counter()
+        index = IndexStore(cache_path)
+        parse_result, incremental_stats = _load_notes_from_index(index, vault_path)
+        index.close()
+        scan_result = ScanResult(
+            md_files=[vault_path / note.rel_path for note in parse_result.notes],
+            skipped={"non_md": 0, "too_large": 0, "no_permission": 0},
+        )
+        timings["scan_ms"] = int((time.perf_counter() - scan_start) * 1000)
+        timings["parse_ms"] = 0
+    else:
+        scan_start = time.perf_counter()
+        scan_result = scan_vault(
+            vault_path,
+            max_file_mb=max_file_mb,
+            max_files_per_sec=get_int(config_data, "scan", "max_files_per_sec", 0),
+            sleep_ms=get_int(config_data, "scan", "sleep_ms", 0),
+        )
+        timings["scan_ms"] = int((time.perf_counter() - scan_start) * 1000)
 
-    parse_start = time.perf_counter()
-    index = IndexStore(cache_path)
-    parse_result, incremental_stats = _load_notes_with_cache(
-        scan_result.md_files, vault_path, index, top_terms_limit
-    )
-    index.close()
-    timings["parse_ms"] = int((time.perf_counter() - parse_start) * 1000)
+        parse_start = time.perf_counter()
+        index = IndexStore(cache_path)
+        parse_result, incremental_stats = _load_notes_with_cache(
+            scan_result.md_files, vault_path, index, top_terms_limit
+        )
+        index.set_meta("last_updated", str(time.time()))
+        index.set_meta("pending", "0")
+        index.commit()
+        index.close()
+        timings["parse_ms"] = int((time.perf_counter() - parse_start) * 1000)
 
     analyze_start = time.perf_counter()
     analysis = analyze_notes(parse_result)
@@ -1041,6 +1148,7 @@ def run_pipeline(
         incremental_stats,
         skipped_by_reason,
         recommendations.downgrades,
+        fast_path,
     )
 
     return PipelineOutput(

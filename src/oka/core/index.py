@@ -4,7 +4,7 @@ import json
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, Optional
+from typing import Dict, Iterable, List, Optional
 
 SCHEMA_VERSION = 1
 
@@ -62,6 +62,28 @@ class IndexStore:
             (path,),
         ).fetchone()
         return dict(row) if row else None
+
+    def list_all(self) -> List[Dict[str, object]]:
+        cur = self.conn.cursor()
+        rows = cur.execute(
+            "SELECT path, mtime, size, sha256, frontmatter, frontmatter_keys, links, top_terms FROM files"
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def get_meta(self, key: str) -> Optional[str]:
+        cur = self.conn.cursor()
+        row = cur.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
+        return row[0] if row else None
+
+    def set_meta(self, key: str, value: str) -> None:
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO meta (key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value=excluded.value
+            """,
+            (key, value),
+        )
 
     def upsert(self, record: CacheRecord) -> None:
         cur = self.conn.cursor()

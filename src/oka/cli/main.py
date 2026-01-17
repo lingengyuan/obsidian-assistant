@@ -14,6 +14,7 @@ from oka.core.config import get_bool, get_int, get_str, load_config
 from oka.core.doctor import run_doctor
 from oka.core.pipeline import run_pipeline, write_json, write_report
 from oka.core.storage import prune_run_logs
+from oka.core.watch import watch_loop
 
 
 def _resolve_vault_path(cli_value: Optional[Path]) -> Optional[Path]:
@@ -149,6 +150,39 @@ def _doctor_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _watch_command(args: argparse.Namespace) -> int:
+    vault_path = _resolve_vault_path(args.vault)
+    if vault_path is None:
+        print("Error: --vault or VAULT_PATH is required.", file=sys.stderr)
+        return 2
+    if not vault_path.exists():
+        print(f"Error: vault path does not exist: {vault_path}", file=sys.stderr)
+        return 2
+
+    base_dir = Path.cwd()
+    _ensure_layout(base_dir)
+    config_data = load_config(vault_path, base_dir)
+
+    watch_loop(
+        vault_path=vault_path,
+        base_dir=base_dir,
+        max_file_mb=get_int(config_data, "scan", "max_file_mb", 5),
+        max_files_per_sec=args.max_files_per_sec
+        if args.max_files_per_sec is not None
+        else get_int(config_data, "scan", "max_files_per_sec", 0),
+        sleep_ms=args.sleep_ms
+        if args.sleep_ms is not None
+        else get_int(config_data, "scan", "sleep_ms", 0),
+        top_terms_limit=get_int(
+            config_data, "performance", "top_terms", 30
+        ),
+        interval_sec=args.interval,
+        once=args.once,
+        low_priority=not args.no_low_priority,
+    )
+    return 0
+
+
 def _init_config(target_dir: Path) -> int:
     target_dir = target_dir.resolve()
     config_path = target_dir / "oka.toml"
@@ -190,9 +224,12 @@ def _default_config_text() -> str:
             "timeout_sec = 0",
             "max_workers = 0",
             "top_terms = 30",
+            "fast_path_max_age_sec = 10",
             "",
             "[scan]",
             "max_file_mb = 5",
+            "max_files_per_sec = 0",
+            "sleep_ms = 0",
             'exclude_dirs = [".obsidian"]',
             "",
             "[format]",
@@ -318,6 +355,8 @@ def _print_summary(summary: dict, file) -> None:
         ),
         file=file,
     )
+    if "fast_path" in summary:
+        print(f"Fast-path: {summary.get('fast_path')}", file=file)
     if skipped_by_reason:
         print(
             "Skipped by reason: {reasons}".format(reasons=skipped_by_reason),
@@ -420,6 +459,43 @@ def build_parser() -> argparse.ArgumentParser:
         help="Rollback Class A changes for a specific file path.",
     )
     rollback_parser.set_defaults(func=_rollback_command)
+
+    watch_parser = subparsers.add_parser(
+        "watch",
+        help="Watch a vault and keep the index up to date.",
+    )
+    watch_parser.add_argument(
+        "--vault",
+        type=Path,
+        help="Path to the Obsidian vault.",
+    )
+    watch_parser.add_argument(
+        "--interval",
+        type=int,
+        default=5,
+        help="Seconds between scans.",
+    )
+    watch_parser.add_argument(
+        "--once",
+        action="store_true",
+        help="Run a single scan and exit.",
+    )
+    watch_parser.add_argument(
+        "--max-files-per-sec",
+        type=int,
+        help="Throttle scan rate (overrides config).",
+    )
+    watch_parser.add_argument(
+        "--sleep-ms",
+        type=int,
+        help="Sleep per file during scan (overrides config).",
+    )
+    watch_parser.add_argument(
+        "--no-low-priority",
+        action="store_true",
+        help="Disable low-priority scheduling attempt.",
+    )
+    watch_parser.set_defaults(func=_watch_command)
 
     return parser
 
