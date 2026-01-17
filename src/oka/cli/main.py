@@ -4,10 +4,12 @@ import argparse
 import json
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
 from oka import __version__
+from oka.core.apply import apply_action_items, rollback_run, write_run_log
 from oka.core.doctor import run_doctor
 from oka.core.pipeline import run_pipeline, write_json, write_report
 
@@ -69,7 +71,30 @@ def _run_command(args: argparse.Namespace) -> int:
         _print_summary(pipeline_output.run_summary, file=sys.stdout)
 
     if args.apply:
-        print("Warning: --apply is not implemented in v1.0.0 run.", file=sys.stderr)
+        run_id = pipeline_output.run_summary.get("run_id", "unknown")
+        apply_info = {
+            "interactive": not args.yes,
+            "ttl_sec": 60,
+            "started_at": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+        }
+        result = apply_action_items(
+            vault_path=vault_path,
+            base_dir=base_dir,
+            run_id=run_id,
+            action_items=pipeline_output.action_items,
+            yes=args.yes,
+            wait_sec=args.wait,
+            force=args.force,
+        )
+        write_run_log(
+            base_dir=base_dir,
+            run_id=run_id,
+            vault_path=vault_path,
+            changes=result.changes,
+            conflicts=result.conflicts,
+            apply_info=apply_info,
+        )
+        return result.return_code
 
     return 0
 
@@ -283,7 +308,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument(
         "--apply",
         action="store_true",
-        help="Apply actions (not implemented).",
+        help="Apply Class A actions (write mode).",
     )
     run_parser.add_argument(
         "--json",
@@ -293,7 +318,18 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument(
         "--yes",
         action="store_true",
-        help="Skip prompts (not implemented).",
+        help="Skip interactive confirmation.",
+    )
+    run_parser.add_argument(
+        "--wait",
+        type=int,
+        default=0,
+        help="Wait up to N seconds for a quiet window before apply.",
+    )
+    run_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Clear stale write lease before apply.",
     )
     run_parser.add_argument(
         "--profile",
@@ -318,7 +354,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     doctor_parser.set_defaults(func=_doctor_command)
 
+    rollback_parser = subparsers.add_parser(
+        "rollback",
+        help="Rollback a previous apply using run_id.",
+    )
+    rollback_parser.add_argument(
+        "run_id",
+        type=str,
+        help="Run identifier from run-summary.json or reports/runs/<run_id>.",
+    )
+    rollback_parser.set_defaults(func=_rollback_command)
+
     return parser
+
+
+def _rollback_command(args: argparse.Namespace) -> int:
+    base_dir = Path.cwd()
+    result = rollback_run(args.run_id, base_dir)
+    return result.return_code
 
 
 def main(argv: Optional[List[str]] = None) -> int:
