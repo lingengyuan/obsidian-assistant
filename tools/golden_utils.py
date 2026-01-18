@@ -63,6 +63,9 @@ def normalize_json(
             if key == "run_id":
                 normalized[key] = "<RUN_ID>"
                 continue
+            if key.endswith("_hash"):
+                normalized[key] = "<HASH>"
+                continue
             if key in TIMESTAMP_KEYS:
                 normalized[key] = "<TIMESTAMP>"
                 continue
