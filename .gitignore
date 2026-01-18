@@ -44,6 +44,7 @@ locks/
 *.csv
 *.json
 !tests/fixtures/test_vault/manifest.json
+!tests/golden/*.json
 
 # Configuration (local overrides - contains personal vault paths)
 config/local.sh
