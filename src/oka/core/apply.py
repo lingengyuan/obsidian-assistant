@@ -770,12 +770,12 @@ def apply_action_items(
                         return_code=11,
                         conflicts=[],
                         changes=[],
-                        waited_sec=waited_sec,
-                        starvation=True,
-                        fallback="abort",
-                        offline_lock=offline_lock_created,
-                        git_info=git_info,
-                    )
+                    waited_sec=waited_sec,
+                    starvation=True,
+                    fallback="abort",
+                    offline_lock=offline_lock_created,
+                    git_info=git_info,
+                )
                 if choice == "append":
                     applicable = append_items
                     fallback = "append_only"
