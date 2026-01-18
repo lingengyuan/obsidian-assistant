@@ -29,6 +29,7 @@ pytest -q
 pytest tests/integration/ -q
 pytest tests/perf/ -q
 
+$env:COVERAGE_FILE = "$env:TEMP\\coverage.phase0"
 pytest --cov=src --cov-report=term-missing
 ```
 
@@ -50,3 +51,9 @@ mypy src
 ```bash
 python scripts/bench.py
 ```
+
+## Phase0 gates (M0.1)
+
+- Unit tests + smoke integration/perf + lint/typecheck + coverage.
+- Golden regression diffs are introduced in M2 (not required in M0.1).
+- `run-summary.json` and `run-log.json` are produced by `oka run` (not by smoke tests).

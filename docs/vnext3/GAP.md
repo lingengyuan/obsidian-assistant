@@ -83,7 +83,7 @@ config files:
 - Add doctor checks for plugin frontmatter field conflicts (`src/oka/core/doctor.py`).
 - Implement config default layering with a defaults file (`src/oka/core/config.py`, new defaults file under `src/oka/config/`).
 - Implement optional write-time normalization for encoding/line endings (`src/oka/core/apply.py`).
-- Add explicit integration/perf test suites and golden regression diff harness (`tests/integration/`, `tests/perf/`).
+- Add golden regression diff harness (M2), plus artifact-generating test helpers for `oka run` outputs (`tests/integration/`).
 
 ## Proposed module map (short)
 

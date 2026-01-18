@@ -37,6 +37,7 @@ extend-exclude = "(^src/core/|^src/exporters/|^src/(main|quality|search|similar)
 [tool.ruff]
 line-length = 88
 target-version = "py38"
+cache-dir = "C:/Users/lgy/AppData/Local/Temp/ruff_cache"
 exclude = [
   "src/core/*",
   "src/exporters/*",
@@ -81,6 +82,7 @@ ignore_errors = true
 
 [tool.coverage.run]
 source = ["src"]
+data_file = "reports/.coverage"
 omit = [
   "tests/*",
   "src/obsidian_assistant.egg-info/*",
