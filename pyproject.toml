@@ -32,21 +32,33 @@ include = ["oka*"]
 [tool.black]
 line-length = 88
 target-version = ["py38"]
+extend-exclude = "(^src/core/|^src/exporters/|^src/(main|quality|search|similar)\\.py$)"
 
 [tool.ruff]
 line-length = 88
 target-version = "py38"
+exclude = [
+  "src/core/*",
+  "src/exporters/*",
+  "src/main.py",
+  "src/quality.py",
+  "src/search.py",
+  "src/similar.py",
+]
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.11"
 strict = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true
 ignore_missing_imports = true
+mypy_path = ["src"]
+explicit_package_bases = true
+exclude = "(^src/core/|^src/exporters/|^src/(main|quality|search|similar)\\.py$)"
 
 [[tool.mypy.overrides]]
 module = [
@@ -55,6 +67,28 @@ module = [
   "oka.__main__",
 ]
 ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = [
+  "core.*",
+  "exporters.*",
+  "main",
+  "quality",
+  "search",
+  "similar",
+]
+ignore_errors = true
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+  "tests/*",
+  "src/obsidian_assistant.egg-info/*",
+  "src/visualizers/*",
+]
+
+[tool.coverage.report]
+show_missing = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

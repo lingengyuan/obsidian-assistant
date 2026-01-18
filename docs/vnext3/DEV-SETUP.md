@@ -42,7 +42,7 @@ black --check src tests
 ## Type checking
 
 ```bash
-mypy
+mypy src
 ```
 
 ## Bench (optional)

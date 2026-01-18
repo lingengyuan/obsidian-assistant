@@ -2,7 +2,7 @@
 
 ## Spec source and interpretation
 
-- ROADMAP/SPEC was not found in this repo. The baseline is derived from the roadmap and full development docs in `dev-docs/` (both filenames are non-ASCII).
+- Canonical spec: `docs/vnext3/SPEC.md`.
 - vNext.3 baseline is interpreted as the v1.0 to v1.3 milestones plus the stable output contracts and schemas.
 
 ## Inventory (concise)

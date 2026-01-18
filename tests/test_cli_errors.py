@@ -54,11 +54,15 @@ def test_doctor_init_config(tmp_path: Path) -> None:
     vault_dir = tmp_path / "vault"
     vault_dir.mkdir()
 
-    result = run_oka(["doctor", "--init-config", "--vault", str(vault_dir)], cwd=tmp_path)
+    result = run_oka(
+        ["doctor", "--init-config", "--vault", str(vault_dir)], cwd=tmp_path
+    )
     assert result.returncode == 0, result.stderr
     assert (vault_dir / "oka.toml").exists()
 
-    repeat = run_oka(["doctor", "--init-config", "--vault", str(vault_dir)], cwd=tmp_path)
+    repeat = run_oka(
+        ["doctor", "--init-config", "--vault", str(vault_dir)], cwd=tmp_path
+    )
     assert repeat.returncode == 0
     assert "already exists" in repeat.stderr.lower()
 

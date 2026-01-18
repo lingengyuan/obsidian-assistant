@@ -13,7 +13,10 @@ def _simple_action() -> dict:
                 "type": "append_related_links_section",
                 "risk_class": "A",
                 "target_path": "note.md",
-                "payload": {"anchor": "oka_related_v1", "markdown_block": "## Related\n"},
+                "payload": {
+                    "anchor": "oka_related_v1",
+                    "markdown_block": "## Related\n",
+                },
                 "dependencies": [],
             }
         ]

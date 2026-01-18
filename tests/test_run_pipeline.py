@@ -61,6 +61,10 @@ def test_incremental_hit_rate(tmp_path: Path) -> None:
     second = run_oka(["run", "--vault", str(vault_path)], cwd=tmp_path)
     assert second.returncode == 0, second.stderr
 
-    summary = json.loads((tmp_path / "reports" / "run-summary.json").read_text(encoding="utf-8"))
+    summary = json.loads(
+        (tmp_path / "reports" / "run-summary.json").read_text(encoding="utf-8")
+    )
     assert summary["cache"]["hit_rate"] > 0.7
-    assert summary["incremental"]["incremental_updated"] <= summary["io"]["scanned_files"]
+    assert (
+        summary["incremental"]["incremental_updated"] <= summary["io"]["scanned_files"]
+    )

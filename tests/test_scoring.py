@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from oka.core.scoring import ScoringConfig, clamp, compute_confidence, quantile_normalize
+from oka.core.scoring import (
+    ScoringConfig,
+    clamp,
+    compute_confidence,
+    quantile_normalize,
+)
 
 
 def test_clamp_bounds() -> None:

@@ -161,7 +161,9 @@ def acquire_write_lease(locks_dir: Path, ttl_sec: int, force: bool) -> Tuple[boo
             return False, "active lease found"
 
     started_at = _now_iso()
-    expires_at = (datetime.utcnow() + timedelta(seconds=ttl_sec)).replace(microsecond=0).isoformat() + "Z"
+    expires_at = (datetime.utcnow() + timedelta(seconds=ttl_sec)).replace(
+        microsecond=0
+    ).isoformat() + "Z"
     lease_data = {
         "pid": os.getpid(),
         "host": socket.gethostname(),
@@ -189,9 +191,9 @@ def _format_frontmatter_fields(fields: Dict[str, List[str]]) -> List[str]:
             continue
         lines.append(f"{key}:")
         for value in values:
-            safe = value.replace("\"", "\\\"")
+            safe = value.replace('"', '\\"')
             if ":" in safe or "#" in safe:
-                safe = f"\"{safe}\""
+                safe = f'"{safe}"'
             lines.append(f"  - {safe}")
     return lines
 
@@ -219,7 +221,9 @@ def _frontmatter_keys(lines: List[str]) -> List[str]:
     return keys
 
 
-def apply_frontmatter_fields(content: str, fields: Dict[str, List[str]]) -> Tuple[str, List[str]]:
+def apply_frontmatter_fields(
+    content: str, fields: Dict[str, List[str]]
+) -> Tuple[str, List[str]]:
     if not fields:
         return content, []
     lines = content.splitlines()
@@ -232,7 +236,10 @@ def apply_frontmatter_fields(content: str, fields: Dict[str, List[str]]) -> Tupl
         inserted_keys = list(fields.keys())
         new_lines.append("---")
         new_lines.extend(lines)
-        return "\n".join(new_lines) + ("\n" if content.endswith("\n") else ""), inserted_keys
+        return (
+            "\n".join(new_lines) + ("\n" if content.endswith("\n") else ""),
+            inserted_keys,
+        )
 
     fm_lines = lines[start + 1 : end]
     existing_keys = set(_frontmatter_keys(fm_lines))
@@ -244,7 +251,10 @@ def apply_frontmatter_fields(content: str, fields: Dict[str, List[str]]) -> Tupl
     updated_lines = lines[:end]
     updated_lines.extend(_format_frontmatter_fields(new_fields))
     updated_lines.extend(lines[end:])
-    return "\n".join(updated_lines) + ("\n" if content.endswith("\n") else ""), inserted_keys
+    return (
+        "\n".join(updated_lines) + ("\n" if content.endswith("\n") else ""),
+        inserted_keys,
+    )
 
 
 def remove_frontmatter_keys(content: str, keys: Sequence[str]) -> Tuple[str, List[str]]:
@@ -445,7 +455,9 @@ def _replace_links(content: str, rename_map: Dict[str, str]) -> str:
     return LINK_PATTERN.sub(repl, content)
 
 
-def _extract_b1_pairs(items: List[Dict[str, object]]) -> Tuple[List[Tuple[str, str]], List[str]]:
+def _extract_b1_pairs(
+    items: List[Dict[str, object]],
+) -> Tuple[List[Tuple[str, str]], List[str]]:
     pairs: List[Tuple[str, str]] = []
     errors: List[str] = []
     for item in items:
@@ -475,7 +487,11 @@ def _apply_b1_transaction(
             _write_conflict_note(note_path, t(lang, "conflict_b1_payload"))
             _write_conflict_note(diff_path, "")
             conflicts.append(
-                {"target_path": action_id, "diff_path": str(diff_path), "note_path": str(note_path)}
+                {
+                    "target_path": action_id,
+                    "diff_path": str(diff_path),
+                    "note_path": str(note_path),
+                }
             )
         return changes, conflicts
 
@@ -493,7 +509,11 @@ def _apply_b1_transaction(
             _write_conflict_note(note_path, t(lang, "conflict_b1_missing"))
             _write_conflict_note(diff_path, "")
             conflicts.append(
-                {"target_path": str(source_path), "diff_path": str(diff_path), "note_path": str(note_path)}
+                {
+                    "target_path": str(source_path),
+                    "diff_path": str(diff_path),
+                    "note_path": str(note_path),
+                }
             )
         if target_path.exists() and target_path != source_path:
             note_path = run_dir / "conflicts" / f"{target_path}.note"
@@ -501,7 +521,11 @@ def _apply_b1_transaction(
             _write_conflict_note(note_path, t(lang, "conflict_b1_target_exists"))
             _write_conflict_note(diff_path, "")
             conflicts.append(
-                {"target_path": str(target_path), "diff_path": str(diff_path), "note_path": str(note_path)}
+                {
+                    "target_path": str(target_path),
+                    "diff_path": str(diff_path),
+                    "note_path": str(note_path),
+                }
             )
 
     if conflicts:
@@ -545,7 +569,11 @@ def _apply_b1_transaction(
                 t(lang, "conflict_b1_changed"),
             )
             conflicts.append(
-                {"target_path": str(path), "diff_path": str(diff_path), "note_path": str(note_path)}
+                {
+                    "target_path": str(path),
+                    "diff_path": str(diff_path),
+                    "note_path": str(note_path),
+                }
             )
 
     if conflicts:
@@ -565,7 +593,11 @@ def _apply_b1_transaction(
                 _write_conflict_note(note_path, t(lang, "conflict_b1_remove_failed"))
                 _write_conflict_note(diff_path, "")
                 conflicts.append(
-                    {"target_path": str(source_path), "diff_path": str(diff_path), "note_path": str(note_path)}
+                    {
+                        "target_path": str(source_path),
+                        "diff_path": str(diff_path),
+                        "note_path": str(note_path),
+                    }
                 )
 
     for item in items:
@@ -708,7 +740,8 @@ def apply_action_items(
             item
             for item in all_items
             if item.get("risk_class") == "A"
-            and item.get("type") in {"append_related_links_section", "add_frontmatter_fields"}
+            and item.get("type")
+            in {"append_related_links_section", "add_frontmatter_fields"}
         ]
         b1_items = [
             item
@@ -737,12 +770,12 @@ def apply_action_items(
                         return_code=11,
                         conflicts=[],
                         changes=[],
-                    waited_sec=waited_sec,
-                    starvation=True,
-                    fallback="abort",
-                    offline_lock=offline_lock_created,
-                    git_info=git_info,
-                )
+                        waited_sec=waited_sec,
+                        starvation=True,
+                        fallback="abort",
+                        offline_lock=offline_lock_created,
+                        git_info=git_info,
+                    )
                 if choice == "append":
                     applicable = append_items
                     fallback = "append_only"
@@ -828,7 +861,11 @@ def apply_action_items(
                 _write_conflict_note(note_path, t(lang, "conflict_target_missing"))
                 _write_conflict_note(diff_path, "")
                 conflicts.append(
-                    {"target_path": target_path, "diff_path": str(diff_path), "note_path": str(note_path)}
+                    {
+                        "target_path": target_path,
+                        "diff_path": str(diff_path),
+                        "note_path": str(note_path),
+                    }
                 )
                 continue
 
@@ -865,7 +902,11 @@ def apply_action_items(
                     t(lang, "conflict_changed_apply"),
                 )
                 conflicts.append(
-                    {"target_path": target_path, "diff_path": str(diff_path), "note_path": str(note_path)}
+                    {
+                        "target_path": target_path,
+                        "diff_path": str(diff_path),
+                        "note_path": str(note_path),
+                    }
                 )
                 continue
 
@@ -989,7 +1030,11 @@ def _rollback_change_partial(
         _write_conflict_note(note_path, t(lang, "conflict_file_missing"))
         _write_conflict_note(diff_path, "")
         conflicts.append(
-            {"target_path": target_path, "diff_path": str(diff_path), "note_path": str(note_path)}
+            {
+                "target_path": target_path,
+                "diff_path": str(diff_path),
+                "note_path": str(note_path),
+            }
         )
         return
 
@@ -1005,7 +1050,9 @@ def _rollback_change_partial(
 
     frontmatter_keys = change.get("frontmatter_keys", []) or []
     if frontmatter_keys:
-        updated_content, removed_keys = remove_frontmatter_keys(updated_content, frontmatter_keys)
+        updated_content, removed_keys = remove_frontmatter_keys(
+            updated_content, frontmatter_keys
+        )
         removed_set = set(removed_keys)
         for key in frontmatter_keys:
             if key not in removed_set:
@@ -1025,7 +1072,11 @@ def _rollback_change_partial(
         )
         _write_conflict_note(note_path, detail)
         conflicts.append(
-            {"target_path": target_path, "diff_path": str(diff_path), "note_path": str(note_path)}
+            {
+                "target_path": target_path,
+                "diff_path": str(diff_path),
+                "note_path": str(note_path),
+            }
         )
         return
 
@@ -1049,7 +1100,11 @@ def _rollback_full(
             _write_conflict_note(note_path, t(lang, "conflict_b1_rollback"))
             _write_conflict_note(diff_path, "")
             conflicts.append(
-                {"target_path": target_path, "diff_path": str(diff_path), "note_path": str(note_path)}
+                {
+                    "target_path": target_path,
+                    "diff_path": str(diff_path),
+                    "note_path": str(note_path),
+                }
             )
             continue
 
@@ -1059,7 +1114,11 @@ def _rollback_full(
             _write_conflict_note(note_path, t(lang, "conflict_missing_backup"))
             _write_conflict_note(diff_path, "")
             conflicts.append(
-                {"target_path": target_path, "diff_path": str(diff_path), "note_path": str(note_path)}
+                {
+                    "target_path": target_path,
+                    "diff_path": str(diff_path),
+                    "note_path": str(note_path),
+                }
             )
             continue
 
@@ -1075,7 +1134,11 @@ def _rollback_full(
                 t(lang, "conflict_changed_rollback"),
             )
             conflicts.append(
-                {"target_path": target_path, "diff_path": str(diff_path), "note_path": str(note_path)}
+                {
+                    "target_path": target_path,
+                    "diff_path": str(diff_path),
+                    "note_path": str(note_path),
+                }
             )
             continue
 
@@ -1131,7 +1194,9 @@ def rollback_run(
 
     if item_id or target_path:
         if item_id:
-            selected = [change for change in changes if change.get("action_id") == item_id]
+            selected = [
+                change for change in changes if change.get("action_id") == item_id
+            ]
             if not selected:
                 print(t(lang, "rollback_no_action", action_id=item_id))
                 return ApplyResult(
@@ -1144,7 +1209,9 @@ def rollback_run(
                     offline_lock=False,
                 )
         else:
-            selected = [change for change in changes if change.get("target_path") == target_path]
+            selected = [
+                change for change in changes if change.get("target_path") == target_path
+            ]
             if not selected:
                 print(t(lang, "rollback_no_file", path=target_path))
                 return ApplyResult(
