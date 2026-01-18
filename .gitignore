@@ -43,6 +43,7 @@ locks/
 *.log
 *.csv
 *.json
+!tests/fixtures/test_vault/manifest.json
 
 # Configuration (local overrides - contains personal vault paths)
 config/local.sh
