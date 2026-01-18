@@ -23,9 +23,7 @@ def test_acquire_write_lease_force(tmp_path: Path) -> None:
     lease_path = locks_dir / "write-lease.json"
     lease_path.write_text(
         json.dumps(
-            {
-                "expires_at": (datetime.utcnow() - timedelta(seconds=5)).isoformat() + "Z"
-            }
+            {"expires_at": (datetime.utcnow() - timedelta(seconds=5)).isoformat() + "Z"}
         ),
         encoding="utf-8",
     )
@@ -43,7 +41,10 @@ def test_apply_missing_file_conflict(tmp_path: Path) -> None:
                 "type": "append_related_links_section",
                 "risk_class": "A",
                 "target_path": "missing.md",
-                "payload": {"anchor": "oka_related_v1", "markdown_block": "## Related\n"},
+                "payload": {
+                    "anchor": "oka_related_v1",
+                    "markdown_block": "## Related\n",
+                },
                 "dependencies": [],
             }
         ]
@@ -62,7 +63,9 @@ def test_apply_missing_file_conflict(tmp_path: Path) -> None:
         offline_lock_cleanup=True,
     )
     assert result.return_code == 2
-    conflict_note = tmp_path / "reports" / "runs" / "run_missing" / "conflicts" / "missing.md.note"
+    conflict_note = (
+        tmp_path / "reports" / "runs" / "run_missing" / "conflicts" / "missing.md.note"
+    )
     assert conflict_note.exists()
 
 

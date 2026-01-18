@@ -7,7 +7,9 @@ import pytest
 from oka.core.pipeline import scan_vault
 
 
-def test_scan_throttle_sleep_ms(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_scan_throttle_sleep_ms(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     vault = tmp_path / "vault"
     vault.mkdir()
     (vault / "a.md").write_text("a", encoding="utf-8")

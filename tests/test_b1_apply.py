@@ -19,7 +19,10 @@ def test_b1_rename_updates_links(tmp_path: Path) -> None:
                 "type": "rename_note_and_update_links",
                 "risk_class": "B1",
                 "target_path": "notes/new.md",
-                "payload": {"source_path": "notes/old.md", "target_path": "notes/new.md"},
+                "payload": {
+                    "source_path": "notes/old.md",
+                    "target_path": "notes/new.md",
+                },
                 "dependencies": [],
             }
         ]

@@ -44,12 +44,16 @@ def _parse_iso(value: str) -> Optional[datetime]:
 
 def _check_lock(path: Path) -> LockCheck:
     if not path.exists():
-        return LockCheck(name=path.name, path=path, present=False, stale=None, details="missing")
+        return LockCheck(
+            name=path.name, path=path, present=False, stale=None, details="missing"
+        )
 
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return LockCheck(name=path.name, path=path, present=True, stale=None, details="unreadable")
+        return LockCheck(
+            name=path.name, path=path, present=True, stale=None, details="unreadable"
+        )
 
     created_at = None
     if isinstance(data, dict):
@@ -65,7 +69,13 @@ def _check_lock(path: Path) -> LockCheck:
         parsed = _parse_iso(str(expires_at))
         if parsed:
             stale = parsed < _now_utc()
-            return LockCheck(name=path.name, path=path, present=True, stale=stale, details="expires_at")
+            return LockCheck(
+                name=path.name,
+                path=path,
+                present=True,
+                stale=stale,
+                details="expires_at",
+            )
 
     if created_at and ttl_sec:
         parsed = _parse_iso(str(created_at))
@@ -75,9 +85,17 @@ def _check_lock(path: Path) -> LockCheck:
             ttl = None
         if parsed and ttl is not None:
             stale = parsed + timedelta(seconds=ttl) < _now_utc()
-            return LockCheck(name=path.name, path=path, present=True, stale=stale, details="created_at+ttl")
+            return LockCheck(
+                name=path.name,
+                path=path,
+                present=True,
+                stale=stale,
+                details="created_at+ttl",
+            )
 
-    return LockCheck(name=path.name, path=path, present=True, stale=None, details="unknown")
+    return LockCheck(
+        name=path.name, path=path, present=True, stale=None, details="unknown"
+    )
 
 
 def _detect_encoding_and_eol(paths: List[Path]) -> Dict[str, object]:
@@ -126,11 +144,16 @@ def run_doctor(
     path_checks = {
         "exists": vault_path.exists(),
         "is_dir": vault_path.is_dir(),
-        "readable": vault_path.exists() and vault_path.is_dir() and os.access(vault_path, os.R_OK),
+        "readable": vault_path.exists()
+        and vault_path.is_dir()
+        and os.access(vault_path, os.R_OK),
     }
 
     recommendations: List[str] = []
-    if encoding_report["encoding"]["utf8_bom"] or encoding_report["encoding"]["non_utf8"]:
+    if (
+        encoding_report["encoding"]["utf8_bom"]
+        or encoding_report["encoding"]["non_utf8"]
+    ):
         recommendations.append(t(lang, "doctor_rec_normalize"))
     if encoding_report["line_endings"]["mixed"]:
         recommendations.append(t(lang, "doctor_rec_line_endings"))
@@ -151,5 +174,8 @@ def run_doctor(
         "encoding": encoding_report["encoding"],
         "line_endings": encoding_report["line_endings"],
         "recommendations": recommendations,
-        "scan": {"scanned_files": len(scan_result.md_files), "skipped": scan_result.skipped},
+        "scan": {
+            "scanned_files": len(scan_result.md_files),
+            "skipped": scan_result.skipped,
+        },
     }

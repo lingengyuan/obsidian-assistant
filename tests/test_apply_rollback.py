@@ -34,7 +34,9 @@ def test_apply_idempotent(tmp_path: Path) -> None:
     result = run_oka(["run", "--vault", str(vault), "--apply", "--yes"], cwd=tmp_path)
     assert result.returncode == 0, result.stderr
 
-    action_items = json.loads((tmp_path / "reports" / "action-items.json").read_text(encoding="utf-8"))
+    action_items = json.loads(
+        (tmp_path / "reports" / "action-items.json").read_text(encoding="utf-8")
+    )
     item = _first_related_item(action_items["items"])
     target_path = item["target_path"]
     anchor = item["payload"]["anchor"]
@@ -56,19 +58,27 @@ def test_rollback_conflict(tmp_path: Path) -> None:
     result = run_oka(["run", "--vault", str(vault), "--apply", "--yes"], cwd=tmp_path)
     assert result.returncode == 0, result.stderr
 
-    summary = json.loads((tmp_path / "reports" / "run-summary.json").read_text(encoding="utf-8"))
+    summary = json.loads(
+        (tmp_path / "reports" / "run-summary.json").read_text(encoding="utf-8")
+    )
     run_id = summary["run_id"]
 
-    action_items = json.loads((tmp_path / "reports" / "action-items.json").read_text(encoding="utf-8"))
+    action_items = json.loads(
+        (tmp_path / "reports" / "action-items.json").read_text(encoding="utf-8")
+    )
     item = _first_related_item(action_items["items"])
     target_path = item["target_path"]
     target_file = vault / target_path
-    target_file.write_text(target_file.read_text(encoding="utf-8") + "\nmanual change\n", encoding="utf-8")
+    target_file.write_text(
+        target_file.read_text(encoding="utf-8") + "\nmanual change\n", encoding="utf-8"
+    )
 
     rollback = run_oka(["rollback", run_id], cwd=tmp_path)
     assert rollback.returncode == 2, rollback.stderr
 
-    conflict_diff = tmp_path / "reports" / "runs" / run_id / "conflicts" / f"{target_path}.diff"
+    conflict_diff = (
+        tmp_path / "reports" / "runs" / run_id / "conflicts" / f"{target_path}.diff"
+    )
     assert conflict_diff.exists()
 
 
@@ -78,9 +88,13 @@ def test_partial_rollback_item(tmp_path: Path) -> None:
     result = run_oka(["run", "--vault", str(vault), "--apply", "--yes"], cwd=tmp_path)
     assert result.returncode == 0, result.stderr
 
-    summary = json.loads((tmp_path / "reports" / "run-summary.json").read_text(encoding="utf-8"))
+    summary = json.loads(
+        (tmp_path / "reports" / "run-summary.json").read_text(encoding="utf-8")
+    )
     run_id = summary["run_id"]
-    action_items = json.loads((tmp_path / "reports" / "action-items.json").read_text(encoding="utf-8"))
+    action_items = json.loads(
+        (tmp_path / "reports" / "action-items.json").read_text(encoding="utf-8")
+    )
     item = _first_related_item(action_items["items"])
     target_path = item["target_path"]
     anchor = item["payload"]["anchor"]
@@ -101,9 +115,13 @@ def test_partial_rollback_file(tmp_path: Path) -> None:
     result = run_oka(["run", "--vault", str(vault), "--apply", "--yes"], cwd=tmp_path)
     assert result.returncode == 0, result.stderr
 
-    summary = json.loads((tmp_path / "reports" / "run-summary.json").read_text(encoding="utf-8"))
+    summary = json.loads(
+        (tmp_path / "reports" / "run-summary.json").read_text(encoding="utf-8")
+    )
     run_id = summary["run_id"]
-    action_items = json.loads((tmp_path / "reports" / "action-items.json").read_text(encoding="utf-8"))
+    action_items = json.loads(
+        (tmp_path / "reports" / "action-items.json").read_text(encoding="utf-8")
+    )
     item = _first_related_item(action_items["items"])
     target_path = item["target_path"]
     anchor = item["payload"]["anchor"]

@@ -352,7 +352,11 @@ def _load_notes_with_cache(
 
         stat = path.stat()
         cached = index.get(rel_path)
-        if cached and cached.get("mtime") == stat.st_mtime and cached.get("size") == stat.st_size:
+        if (
+            cached
+            and cached.get("mtime") == stat.st_mtime
+            and cached.get("size") == stat.st_size
+        ):
             notes.append(_note_from_cache(path, rel_path, cached))
             unchanged += 1
             continue
@@ -611,7 +615,9 @@ def recommend_notes(
             left = notes[i]
             for j in range(i + 1, len(notes)):
                 right = notes[j]
-                content_sim = _jaccard(set(left.content_tokens), set(right.content_tokens))
+                content_sim = _jaccard(
+                    set(left.content_tokens), set(right.content_tokens)
+                )
                 title_sim = _jaccard(left.title_tokens, right.title_tokens)
                 link_overlap = _jaccard(left.link_set, right.link_set)
                 pair_stats.append(
@@ -896,7 +902,9 @@ def build_health(analysis: AnalysisResult, vault_path: Path) -> Dict[str, object
     }
 
 
-def build_action_items(plan: PlanResult, vault_path: Path, profile: str) -> Dict[str, object]:
+def build_action_items(
+    plan: PlanResult, vault_path: Path, profile: str
+) -> Dict[str, object]:
     return {
         "version": "1",
         "vault": str(vault_path),
@@ -1064,9 +1072,7 @@ def run_pipeline(
         min_related_confidence=get_float(
             config_data, "scoring", "min_related_confidence", 0.3
         ),
-        merge_confidence=get_float(
-            config_data, "scoring", "merge_confidence", 0.85
-        ),
+        merge_confidence=get_float(config_data, "scoring", "merge_confidence", 0.85),
         low_confidence=get_float(config_data, "scoring", "low_confidence", 0.45),
         norm_method=get_str(config_data, "scoring", "model", "quantile"),
     )
