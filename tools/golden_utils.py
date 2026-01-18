@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 RUN_ID_RE = re.compile(r"\d{8}_\d{6}_[0-9a-f]{6}")
+ACTION_ID_RE = re.compile(r"^act_\d{4}$")
 TIMESTAMP_KEYS = {"generated_at", "started_at", "ended_at", "created_at", "expires_at"}
 PATH_KEYS = {
     "vault",
@@ -18,7 +19,7 @@ PATH_KEYS = {
 
 
 def _list_sort_key(item: dict[str, Any]) -> str | None:
-    for key in ("action_id", "id", "target_path", "path", "file", "note_path"):
+    for key in ("target_path", "path", "file", "note_path", "action_id", "id"):
         value = item.get(key)
         if value is not None:
             return str(value)
@@ -63,6 +64,10 @@ def normalize_json(
             if key == "run_id":
                 normalized[key] = "<RUN_ID>"
                 continue
+            if key in {"action_id", "id"} and isinstance(value, str):
+                if ACTION_ID_RE.match(value):
+                    normalized[key] = "<ACTION_ID>"
+                    continue
             if key.endswith("_hash"):
                 normalized[key] = "<HASH>"
                 continue
