@@ -17,6 +17,25 @@ PATH_KEYS = {
 }
 
 
+def _list_sort_key(item: dict[str, Any]) -> str | None:
+    for key in ("action_id", "id", "target_path", "path", "file", "note_path"):
+        value = item.get(key)
+        if value is not None:
+            return str(value)
+    return None
+
+
+def _maybe_sort_list(items: list[Any]) -> list[Any]:
+    if not items:
+        return items
+    if not all(isinstance(item, dict) for item in items):
+        return items
+    keys = [_list_sort_key(item) for item in items]
+    if any(key is None for key in keys):
+        return items
+    return [item for _, item in sorted(zip(keys, items), key=lambda pair: pair[0])]
+
+
 def _normalize_path(value: str, base_dir: Path | None, vault_dir: Path | None) -> str:
     normalized = value.replace("\\", "/")
     if base_dir:
@@ -56,7 +75,8 @@ def normalize_json(
             normalized[key] = normalize_json(value, base_dir=base_dir, vault_dir=vault_dir)
         return normalized
     if isinstance(data, list):
-        return [normalize_json(item, base_dir=base_dir, vault_dir=vault_dir) for item in data]
+        ordered = _maybe_sort_list(list(data))
+        return [normalize_json(item, base_dir=base_dir, vault_dir=vault_dir) for item in ordered]
     if isinstance(data, str):
         return _normalize_text(data, base_dir, vault_dir)
     return data
