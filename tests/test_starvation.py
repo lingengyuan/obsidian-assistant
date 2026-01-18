@@ -7,7 +7,9 @@ import pytest
 from oka.core.apply import apply_action_items, wait_for_quiet
 
 
-def test_wait_for_quiet_starvation(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_wait_for_quiet_starvation(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     vault = tmp_path / "vault"
     obsidian = vault / ".obsidian"
     obsidian.mkdir(parents=True)
@@ -66,7 +68,9 @@ def test_starvation_returns_11(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
     assert result.starvation is True
 
 
-def test_offline_lock_marker_cleanup(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_offline_lock_marker_cleanup(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     vault = tmp_path / "vault"
     vault.mkdir()
     (vault / "note.md").write_text("# Note\n", encoding="utf-8")
@@ -83,7 +87,10 @@ def test_offline_lock_marker_cleanup(monkeypatch: pytest.MonkeyPatch, tmp_path: 
                 "type": "append_related_links_section",
                 "risk_class": "A",
                 "target_path": "note.md",
-                "payload": {"anchor": "oka_related_v1", "markdown_block": "## Related\n"},
+                "payload": {
+                    "anchor": "oka_related_v1",
+                    "markdown_block": "## Related\n",
+                },
                 "dependencies": [],
             }
         ]

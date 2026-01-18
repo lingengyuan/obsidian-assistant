@@ -9,7 +9,9 @@ def test_doctor_output_zh(tmp_path: Path) -> None:
     repo_root = Path(__file__).resolve().parents[1]
     vault_path = repo_root / "tests" / "fixtures" / "sample_vault"
 
-    result = run_oka(["doctor", "--vault", str(vault_path), "--lang", "zh"], cwd=tmp_path)
+    result = run_oka(
+        ["doctor", "--vault", str(vault_path), "--lang", "zh"], cwd=tmp_path
+    )
     assert result.returncode == 0, result.stderr
     assert "Doctor 报告" in result.stdout
     assert "路径检查" in result.stdout

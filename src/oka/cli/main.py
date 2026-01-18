@@ -86,9 +86,7 @@ def _run_command(args: argparse.Namespace) -> int:
             config_data, "apply", "offline_lock_cleanup", True
         )
         git_policy = get_str(config_data, "apply.git", "policy", "require_clean")
-        git_auto_commit = get_bool(
-            config_data, "apply.git", "auto_commit", False
-        )
+        git_auto_commit = get_bool(config_data, "apply.git", "auto_commit", False)
         git_auto_stash = git_policy == "auto_stash"
         apply_info = {
             "interactive": not args.yes,
@@ -191,15 +189,17 @@ def _watch_command(args: argparse.Namespace) -> int:
         vault_path=vault_path,
         base_dir=base_dir,
         max_file_mb=get_int(config_data, "scan", "max_file_mb", 5),
-        max_files_per_sec=args.max_files_per_sec
-        if args.max_files_per_sec is not None
-        else get_int(config_data, "scan", "max_files_per_sec", 0),
-        sleep_ms=args.sleep_ms
-        if args.sleep_ms is not None
-        else get_int(config_data, "scan", "sleep_ms", 0),
-        top_terms_limit=get_int(
-            config_data, "performance", "top_terms", 30
+        max_files_per_sec=(
+            args.max_files_per_sec
+            if args.max_files_per_sec is not None
+            else get_int(config_data, "scan", "max_files_per_sec", 0)
         ),
+        sleep_ms=(
+            args.sleep_ms
+            if args.sleep_ms is not None
+            else get_int(config_data, "scan", "sleep_ms", 0)
+        ),
+        top_terms_limit=get_int(config_data, "performance", "top_terms", 30),
         interval_sec=args.interval,
         once=args.once,
         low_priority=not args.no_low_priority,
