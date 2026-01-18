@@ -117,14 +117,13 @@ def test_golden_regression(tmp_path: Path) -> None:
         reasoning, expected_reasoning.read_text(encoding="utf-8"), "reasoning output"
     )
 
-    related_item = next(
-        (
-            item
-            for item in action_items.get("items", [])
-            if item.get("type") == "append_related_links_section"
-        ),
-        None,
-    )
+    related_items = [
+        item
+        for item in action_items.get("items", [])
+        if item.get("type") == "append_related_links_section"
+    ]
+    related_items.sort(key=lambda item: str(item.get("target_path") or ""))
+    related_item = related_items[0] if related_items else None
     assert related_item is not None
     related_block = related_item.get("payload", {}).get("markdown_block", "")
     expected_related = GOLDEN_DIR / "related-block-normal.md"
