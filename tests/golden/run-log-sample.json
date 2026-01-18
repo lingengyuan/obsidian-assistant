@@ -1,0 +1,748 @@
+{
+  "apply": {
+    "fallback": "none",
+    "git": {
+      "auto_commit": false,
+      "auto_stash": false,
+      "dirty": null,
+      "policy": "require_clean",
+      "post_commit": null,
+      "pre_commit": null,
+      "repo": false
+    },
+    "interactive": false,
+    "offline_lock": false,
+    "started_at": "<TIMESTAMP>",
+    "starvation": false,
+    "ttl_sec": 60,
+    "waited_sec": 0
+  },
+  "changes": [
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Archive/archive_01.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Archive/archive_01.md.patch",
+      "risk_class": "A",
+      "target_path": "Archive/archive_01.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Archive/archive_02.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Archive/archive_02.md.patch",
+      "risk_class": "A",
+      "target_path": "Archive/archive_02.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Archive/archive_03.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Archive/archive_03.md.patch",
+      "risk_class": "A",
+      "target_path": "Archive/archive_03.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Archive/archive_04.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Archive/archive_04.md.patch",
+      "risk_class": "A",
+      "target_path": "Archive/archive_04.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Archive/archive_05.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Archive/archive_05.md.patch",
+      "risk_class": "A",
+      "target_path": "Archive/archive_05.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Daily/2026-01-01.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Daily/2026-01-01.md.patch",
+      "risk_class": "A",
+      "target_path": "Daily/2026-01-01.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Daily/2026-01-02.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Daily/2026-01-02.md.patch",
+      "risk_class": "A",
+      "target_path": "Daily/2026-01-02.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Daily/2026-01-03.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Daily/2026-01-03.md.patch",
+      "risk_class": "A",
+      "target_path": "Daily/2026-01-03.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Daily/2026-01-04.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Daily/2026-01-04.md.patch",
+      "risk_class": "A",
+      "target_path": "Daily/2026-01-04.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Daily/2026-01-05.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Daily/2026-01-05.md.patch",
+      "risk_class": "A",
+      "target_path": "Daily/2026-01-05.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/edge_anchor_far_01.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/edge_anchor_far_01.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/edge_anchor_far_01.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/edge_anchor_far_02.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/edge_anchor_far_02.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/edge_anchor_far_02.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/edge_deleted_related_01.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/edge_deleted_related_01.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/edge_deleted_related_01.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/edge_deleted_related_02.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/edge_deleted_related_02.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/edge_deleted_related_02.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/edge_hash_mismatch_01.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/edge_hash_mismatch_01.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/edge_hash_mismatch_01.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/edge_hash_mismatch_02.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/edge_hash_mismatch_02.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/edge_hash_mismatch_02.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/edge_missing_anchor_01.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/edge_missing_anchor_01.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/edge_missing_anchor_01.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/edge_missing_anchor_02.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/edge_missing_anchor_02.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/edge_missing_anchor_02.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/edge_multi_related_01.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/edge_multi_related_01.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/edge_multi_related_01.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/edge_multi_related_02.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/edge_multi_related_02.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/edge_multi_related_02.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/edge_multi_related_03.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/edge_multi_related_03.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/edge_multi_related_03.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/filler_01.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/filler_01.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/filler_01.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/filler_02.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/filler_02.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/filler_02.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/filler_03.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/filler_03.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/filler_03.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/filler_04.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/filler_04.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/filler_04.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/filler_special_01.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/filler_special_01.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/filler_special_01.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/filler_special_02.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/filler_special_02.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/filler_special_02.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/filler_special_03.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/filler_special_03.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/filler_special_03.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/filler_special_04.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/filler_special_04.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/filler_special_04.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/filler_special_05.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/filler_special_05.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/filler_special_05.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/normal_01.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/normal_01.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/normal_01.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/normal_02.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/normal_02.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/normal_02.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/normal_03.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/normal_03.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/normal_03.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/normal_04.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/normal_04.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/normal_04.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/normal_05.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/normal_05.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/normal_05.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/normal_06.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/normal_06.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/normal_06.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/normal_07.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/normal_07.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/normal_07.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/normal_08.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/normal_08.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/normal_08.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/normal_09.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/normal_09.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/normal_09.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Notes/normal_10.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Notes/normal_10.md.patch",
+      "risk_class": "A",
+      "target_path": "Notes/normal_10.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Projects/project_01.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Projects/project_01.md.patch",
+      "risk_class": "A",
+      "target_path": "Projects/project_01.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Projects/project_02.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Projects/project_02.md.patch",
+      "risk_class": "A",
+      "target_path": "Projects/project_02.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Projects/project_03.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Projects/project_03.md.patch",
+      "risk_class": "A",
+      "target_path": "Projects/project_03.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Projects/project_04.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Projects/project_04.md.patch",
+      "risk_class": "A",
+      "target_path": "Projects/project_04.md"
+    },
+    {
+      "action_id": "<ACTION_ID>",
+      "action_type": "append_related_links_section",
+      "after_hash": "<HASH>",
+      "anchors": [
+        "oka_related_v1"
+      ],
+      "backup_path": "<BASE_DIR>/reports/runs/<RUN_ID>/backups/Projects/project_05.md.bak",
+      "base_hash": "<HASH>",
+      "before_hash": "<HASH>",
+      "dependencies": [],
+      "frontmatter_keys": [],
+      "patch_path": "<BASE_DIR>/reports/runs/<RUN_ID>/patches/Projects/project_05.md.patch",
+      "risk_class": "A",
+      "target_path": "Projects/project_05.md"
+    }
+  ],
+  "conflicts": [],
+  "ended_at": "<TIMESTAMP>",
+  "run_id": "<RUN_ID>",
+  "started_at": "<TIMESTAMP>",
+  "vault": "<VAULT>",
+  "version": "1"
+}

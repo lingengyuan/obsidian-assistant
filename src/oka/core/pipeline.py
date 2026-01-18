@@ -696,7 +696,11 @@ def recommend_notes(
 
     for idx, note in enumerate(notes):
         suggestions = sorted(
-            related_map[idx], key=lambda item: item["confidence"], reverse=True
+            related_map[idx],
+            key=lambda item: (
+                -float(item.get("confidence", 0.0)),
+                str(item.get("target_path") or item.get("title") or ""),
+            ),
         )[:3]
         if suggestions:
             related_blocks.append(_build_related_block(note, suggestions, lang))
