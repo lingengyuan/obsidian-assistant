@@ -82,9 +82,7 @@ def _run_command(args: argparse.Namespace) -> int:
         run_id = pipeline_output.run_summary.get("run_id", "unknown")
         max_wait_sec = get_int(config_data, "apply", "max_wait_sec", 30)
         offline_marker = get_str(config_data, "apply", "offline_lock_marker", ".nosync")
-        offline_cleanup = get_bool(
-            config_data, "apply", "offline_lock_cleanup", True
-        )
+        offline_cleanup = get_bool(config_data, "apply", "offline_lock_cleanup", True)
         git_policy = get_str(config_data, "apply.git", "policy", "require_clean")
         git_auto_commit = get_bool(config_data, "apply.git", "auto_commit", False)
         git_auto_stash = git_policy == "auto_stash"
@@ -406,7 +404,11 @@ def _print_summary(summary: dict, file, lang: str) -> None:
             file=file,
         )
     if skipped_by_reason:
-        print(t(lang, "performance_skipped_by_reason", reasons=skipped_by_reason), file=file)
+        print(
+            t(lang, "performance_skipped_by_reason", reasons=skipped_by_reason),
+            file=file,
+        )
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
