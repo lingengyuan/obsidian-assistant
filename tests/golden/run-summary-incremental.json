@@ -1,0 +1,47 @@
+{
+  "cache": {
+    "hit_rate": 1.0,
+    "incremental_updated": 0,
+    "present": true
+  },
+  "downgrades": [],
+  "fast_path": true,
+  "incremental": {
+    "hit_rate": 1.0,
+    "incremental_updated": 0,
+    "removed": 0,
+    "skipped_by_reason": {
+      "no_permission": 0,
+      "non_md": 0,
+      "too_large": 0,
+      "unchanged": 50
+    }
+  },
+  "io": {
+    "scanned_files": 50,
+    "skipped": {
+      "no_permission": 0,
+      "non_md": 0,
+      "too_large": 0
+    },
+    "skipped_by_reason": {
+      "no_permission": 0,
+      "non_md": 0,
+      "too_large": 0,
+      "unchanged": 50
+    }
+  },
+  "run_id": "<RUN_ID>",
+  "timing": {
+    "stages": {
+      "analyze_ms": 0,
+      "parse_ms": 0,
+      "plan_ms": 0,
+      "recommend_ms": 0,
+      "report_ms": 0,
+      "scan_ms": 0
+    },
+    "total_ms": 0
+  },
+  "version": "1"
+}

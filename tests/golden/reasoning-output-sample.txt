@@ -1,0 +1,19 @@
+{
+  "action_id": "act_0001",
+  "confidence": 0.2,
+  "reason": {
+    "content_sim": 0.0,
+    "details": "Link target 'MissingAnchorNote' not found in vault.",
+    "filters": [],
+    "kind": "broken_link_candidate",
+    "link_overlap": 0.0,
+    "norm_method": "quantile",
+    "title_sim": 0.0,
+    "weights": {
+      "content": 0.6,
+      "link": 0.1,
+      "title": 0.3
+    }
+  },
+  "type": "create_stub_note"
+}
