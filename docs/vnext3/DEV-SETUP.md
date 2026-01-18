@@ -1,0 +1,52 @@
+# vNext.3 Dev Setup
+
+## Prereqs
+
+- Python 3.8+ (3.11 recommended)
+- Git
+
+## Install
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+# source .venv/bin/activate  # macOS/Linux
+
+python -m pip install -e ".[dev]"
+```
+
+## Run CLI
+
+```bash
+python -m oka --help
+python -m oka run --vault /path/to/vault
+```
+
+## Tests
+
+```bash
+pytest -q
+pytest tests/integration/ -q
+pytest tests/perf/ -q
+
+pytest --cov=src --cov-report=term-missing
+```
+
+## Lint and format
+
+```bash
+ruff check src tests
+black --check src tests
+```
+
+## Type checking
+
+```bash
+mypy
+```
+
+## Bench (optional)
+
+```bash
+python scripts/bench.py
+```

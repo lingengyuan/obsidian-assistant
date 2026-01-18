@@ -1,6 +1,6 @@
-# Contributing to Obsidian Knowledge Assistant
+# Contributing to Obsidian Assistant
 
-First off, thank you for considering contributing to Obsidian Knowledge Assistant! 🎉
+First off, thank you for considering contributing to Obsidian Assistant!
 
 ## Code of Conduct
 
@@ -41,14 +41,22 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 
 ```bash
 # Clone your fork
-git clone https://github.com/yourusername/obsidian-knowledge-assistant.git
-cd obsidian-knowledge-assistant
+git clone https://github.com/yourusername/obsidian-assistant.git
+cd obsidian-assistant
 
 # Create a branch
 git checkout -b feature/my-new-feature
 
+# Create and activate a virtualenv (optional but recommended)
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+# source .venv/bin/activate  # macOS/Linux
+
+# Install dev tooling
+python -m pip install -e ".[dev]"
+
 # Make your changes and test
-python src/main.py --vault /path/to/test/vault
+python -m oka run --vault /path/to/test/vault
 
 # Commit your changes
 git add .
@@ -72,20 +80,19 @@ git push origin feature/my-new-feature
 
 ```
 src/
-├── core/           # Core analysis modules
-│   ├── analyzer.py
-│   ├── quality_scorer.py
-│   └── similarity.py
-├── exporters/      # Data export modules
-│   ├── exporter.py
-│   └── report_generator.py
-└── *.py           # Command-line tools
+  oka/                # Primary CLI + core implementation
+    cli/              # CLI entrypoints
+    core/             # pipeline/scoring/apply/doctor/etc.
+  core/               # Legacy modules (deprecated)
+  exporters/          # Legacy exporters (deprecated)
+tests/
+docs/
 ```
 
 ### Adding a New Feature
 
-1. **Core Module** - Add to `src/core/` if it's analysis logic
-2. **CLI Tool** - Add to `src/` if it's a command-line interface
+1. **Core Module** - Add to `src/oka/core/` if it's analysis logic
+2. **CLI Tool** - Add to `src/oka/cli/` if it's a command-line interface
 3. **Documentation** - Update relevant docs in `docs/`
 4. **Tests** - Add tests in `tests/`
 5. **Examples** - Add usage examples if applicable
@@ -112,13 +119,22 @@ Closes #123
 
 ```bash
 # Run all tests
-python -m pytest tests/
+pytest -q
 
-# Run specific test file
-python -m pytest tests/test_analyzer.py
+# Run integration/perf suites if present
+pytest tests/integration/ -q
+pytest tests/perf/ -q
 
 # Run with coverage
-python -m pytest --cov=src tests/
+pytest --cov=src --cov-report=term-missing
+```
+
+## Quality Checks
+
+```bash
+ruff check src tests
+black --check src tests
+mypy
 ```
 
 ## Documentation
@@ -139,4 +155,4 @@ Contributors will be recognized in:
 - Release notes
 - GitHub contributors page
 
-Thank you for contributing! 🙏
+Thank you for contributing!
